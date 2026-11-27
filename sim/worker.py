@@ -232,8 +232,10 @@ def design_changes(changes: dict):
             c = component_by_id(rocket, cid)
             if c is None or str(c.getClass().getSimpleName()) != "BodyTube":
                 raise ValueError(f"part {cid} is not a body tube")
+            applied.setdefault("tubes", []).append({
+                "diameter_mm": round(float(c.getOuterRadius()) * 2000, 1),
+                "from_mm": round(float(c.getLength()) * 1000, 1), "to_mm": mm})
             c.setLength(mm / 1000.0)
-            applied.setdefault("tube_lengths_mm", {})[str(cid)] = mm
         if mass is not None and mode == "nose":
             add_nose_ballast(rocket, mass)
             applied["nose_ballast_g"] = mass

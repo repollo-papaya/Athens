@@ -511,10 +511,7 @@
       if (c.nose_ballast_g != null) bits.push(`${fmt(c.nose_ballast_g, 0)} g nose ballast`);
       if (c.added_mass_g != null) bits.push(`${c.added_mass_g >= 0 ? "+" : ""}${fmt(c.added_mass_g, 0)} g`);
       if (c.liftoff_mass_g != null) bits.push(`liftoff set to ${fmt(c.liftoff_mass_g, 0)} g`);
-      for (const [id, mm] of Object.entries(c.tube_lengths_mm || {})) {
-        const t = byId[id];
-        bits.push(`${t ? fmt(2 * t.outer_radius_mm, 0) + " mm tube" : "tube " + id} → ${fmt(mm, 0)} mm`);
-      }
+      for (const t of c.tubes || []) bits.push(`${fmt(t.diameter_mm, 0)} mm tube ${fmt(t.from_mm, 0)} → ${fmt(t.to_mm, 0)} mm`);
       $("subtitle").textContent = "Team rocket with changes: " + bits.join(" · ");
     }
     document.title = $("title").textContent + " · Rocket Design";
