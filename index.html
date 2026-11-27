@@ -115,6 +115,7 @@
   .doc-meta { min-width: 0; }
   .doc-title { font: 700 1.0625rem/1.3 var(--font-display); }
   .doc-sub { font: 400 0.8125rem/1.4 var(--font-mono); color: var(--muted); margin-top: 0.25rem; }
+  .doc-sub a { color: var(--accent); }
   .btn {
     display: inline-flex;
     align-items: center;
@@ -224,7 +225,7 @@
 <body>
 <main>
   <header>
-    <p class="eyebrow">Athens &middot; Design document &middot; Nov 17, 2026</p>
+    <p class="eyebrow">Athens &middot; Design document &middot; Revised Nov 27, 2026</p>
     <h1>ARC Rocket Design Optimizer</h1>
     <p class="lede">A planned web app that runs hundreds of OpenRocket simulations for a set of launch conditions, ranks designs by expected competition score, and returns the top few with a robustness estimate.</p>
   </header>
@@ -239,7 +240,7 @@
   <section class="doc" aria-label="Design document">
     <div class="doc-meta">
       <div class="doc-title">Read the design document</div>
-      <div class="doc-sub">PDF &middot; 11 pages &middot; 324 KB</div>
+      <div class="doc-sub">PDF &middot; 13 pages &middot; 149 KB &middot; <a href="https://github.com/repollo-papaya/Athens/blob/main/docs/design-document.md">Markdown source</a></div>
     </div>
     <a class="btn" href="ARC%20Rocket%20Design%20Optimizer%20Design%20Document.pdf" target="_blank" rel="noopener">Open PDF &rarr;</a>
   </section>
@@ -290,14 +291,15 @@
       <li><span class="n">02</span><span class="t">Scope and non-goals<span class="d">Single-stage egg-lofters only; no safety certification.</span></span></li>
       <li><span class="n">03</span><span class="t">Users and key flows<span class="d">Sign in, add a rocket, describe conditions, read ranked results, log flights.</span></span></li>
       <li><span class="n">04</span><span class="t">System architecture<span class="d">GitHub Pages web app, Firestore, a polling Python worker, a Claude parse function.</span></span></li>
-      <li><span class="n">05</span><span class="t">Data contracts<span class="d">Versioned job-request and job-result JSON.</span></span></li>
-      <li><span class="n">06</span><span class="t">Simulation engine and calibration<span class="d">OpenRocket via orlab; correction factors fit from logged flights.</span></span></li>
-      <li><span class="n">07</span><span class="t">Optimizer and scoring<span class="d">Coarse sweep, refinement, then a Monte Carlo robustness check.</span></span></li>
-      <li><span class="n">08</span><span class="t">AI input mapping<span class="d">Free text to a confirmed conditions form, never to code.</span></span></li>
-      <li><span class="n">09</span><span class="t">Web app, worker, and deployment<span class="d">Job states, cost, and offline design cards for the field.</span></span></li>
-      <li><span class="n">10</span><span class="t">Security and cost controls</span></li>
-      <li><span class="n">11</span><span class="t">Limitations and risks</span></li>
-      <li><span class="n">12</span><span class="t">Build plan and open questions</span></li>
+      <li><span class="n">05</span><span class="t">Categories of information<span class="d">Rules, launch conditions, fixed rocket, variants and run settings, and where each is stored. New in this revision.</span></span></li>
+      <li><span class="n">06</span><span class="t">Data contracts<span class="d">Versioned JSON for rules, rocket versions, job requests and results.</span></span></li>
+      <li><span class="n">07</span><span class="t">Simulation engine and calibration<span class="d">OpenRocket via orlab; correction factors fit from logged flights.</span></span></li>
+      <li><span class="n">08</span><span class="t">Optimizer and scoring<span class="d">Coarse sweep, refinement, then a Monte Carlo robustness check.</span></span></li>
+      <li><span class="n">09</span><span class="t">AI input mapping<span class="d">Free text to a confirmed conditions form, never to code.</span></span></li>
+      <li><span class="n">10</span><span class="t">Web app, worker, and deployment<span class="d">Job states, cost, and offline design cards for the field.</span></span></li>
+      <li><span class="n">11</span><span class="t">Security and cost controls</span></li>
+      <li><span class="n">12</span><span class="t">Limitations and risks</span></li>
+      <li><span class="n">13</span><span class="t">Build plan and open questions</span></li>
     </ol>
   </section>
 

@@ -1,0 +1,13 @@
+{
+  "name": "athens",
+  "private": true,
+  "description": "ARC Rocket Design Optimizer",
+  "type": "module",
+  "scripts": {
+    "build:design-pdf": "node scripts/build-design-pdf.mjs"
+  },
+  "devDependencies": {
+    "marked": "12.0.2",
+    "playwright": "^1.40.0"
+  }
+}
