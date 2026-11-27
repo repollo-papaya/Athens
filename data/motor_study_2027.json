@@ -1,0 +1,2583 @@
+{
+  "site_assumptions": [
+    {
+      "name": "El Paso (qualification)",
+      "elevation_ft": 3740,
+      "temperature_f": 70,
+      "wind_mph": 5,
+      "humidity_pct": 25,
+      "latitude_deg": 31.8,
+      "longitude_deg": -106.4,
+      "targets_ft": [
+        800.0
+      ]
+    },
+    {
+      "name": "ARC Finals (Virginia)",
+      "elevation_ft": 500,
+      "temperature_f": 75,
+      "wind_mph": 5,
+      "humidity_pct": 60,
+      "latitude_deg": 38.9,
+      "longitude_deg": -77.8,
+      "targets_ft": [
+        775.0,
+        825.0
+      ]
+    }
+  ],
+  "limits": {
+    "min_stability_cal": 1.0,
+    "min_rail_exit_fps": 45.0,
+    "min_thrust_to_weight": 5.0,
+    "max_deploy_fps": 40.0,
+    "max_liftoff_g_assumed": 650.0
+  },
+  "motors": [
+    {
+      "designation": "F59WT",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 57.0,
+      "database_motor": "Cesaroni Technology Inc. 57F59-12A",
+      "database_impulse_ns": 57.2,
+      "thrust_scale": 0.997,
+      "average_thrust_n": 59.5,
+      "burn_time_s": 0.96,
+      "launch_mass_g": 99.0,
+      "delays_s": [
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        12.0
+      ],
+      "delay_kind": "adjustable up to 12 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 92.1,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.86,
+          "apogee_ft": 800.56,
+          "duration_s": 42.22,
+          "stability_cal": 1.59,
+          "min_stability_cal": -5.14,
+          "rail_exit_fps": 63.43,
+          "deploy_fps": 27.87,
+          "liftoff_g": 583.49,
+          "max_accel_g": 11.39,
+          "thrust_to_weight": 10.4,
+          "score": 9.4,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 85.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.69,
+          "apogee_ft": 774.66,
+          "duration_s": 43.0,
+          "stability_cal": 1.49,
+          "min_stability_cal": -5.19,
+          "rail_exit_fps": 63.45,
+          "deploy_fps": 22.41,
+          "liftoff_g": 577.19,
+          "max_accel_g": 11.52,
+          "thrust_to_weight": 10.5,
+          "score": 12.3,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 35.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.76,
+          "apogee_ft": 824.9,
+          "duration_s": 47.23,
+          "stability_cal": 1.06,
+          "min_stability_cal": -5.64,
+          "rail_exit_fps": 67.0,
+          "deploy_fps": 24.6,
+          "liftoff_g": 527.19,
+          "max_accel_g": 12.71,
+          "thrust_to_weight": 11.5,
+          "score": 29.0,
+          "problems": []
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 792.9,
+          "apogee_sd_ft": 28.3,
+          "duration_mean_s": 41.9,
+          "duration_sd_s": 1.26,
+          "altitude_error_mean_ft": 22.1,
+          "score_mean": 29.9,
+          "score_p90": 53.5,
+          "min_stability_cal": 1.15,
+          "min_rail_exit_fps": 61.1
+        }
+      },
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": true,
+      "risk_flags": [
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 1,
+      "expected_score": 29.9,
+      "rank_key": [
+        0,
+        1,
+        29.9
+      ]
+    },
+    {
+      "designation": "F26FJ",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 62.2,
+      "database_motor": "AeroTech F26FJ",
+      "database_impulse_ns": 62.5,
+      "thrust_scale": 0.995,
+      "average_thrust_n": 25.1,
+      "burn_time_s": 2.47,
+      "launch_mass_g": 100.7,
+      "delays_s": [
+        6.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 146.7,
+          "delay_s": 6.0,
+          "optimum_delay_s": 4.94,
+          "apogee_ft": 802.04,
+          "duration_s": 41.77,
+          "stability_cal": 1.88,
+          "min_stability_cal": 1.82,
+          "rail_exit_fps": 42.36,
+          "deploy_fps": 34.42,
+          "liftoff_g": 639.79,
+          "max_accel_g": 5.08,
+          "thrust_to_weight": 4.0,
+          "score": 9.1,
+          "problems": [
+            "leaves the rail at 42 ft/s (< 45)",
+            "thrust-to-weight 4.0 (< 5)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 146.1,
+          "delay_s": 6.0,
+          "optimum_delay_s": 4.77,
+          "apogee_ft": 770.82,
+          "duration_s": 41.81,
+          "stability_cal": 1.85,
+          "min_stability_cal": 1.85,
+          "rail_exit_fps": 42.38,
+          "deploy_fps": 40.9,
+          "liftoff_g": 639.19,
+          "max_accel_g": 5.08,
+          "thrust_to_weight": 4.0,
+          "score": 11.4,
+          "problems": [
+            "leaves the rail at 42 ft/s (< 45)",
+            "thrust-to-weight 4.0 (< 5)",
+            "chute opens at 41 ft/s with the 6 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 104.9,
+          "delay_s": 6.0,
+          "optimum_delay_s": 4.89,
+          "apogee_ft": 826.28,
+          "duration_s": 45.9,
+          "stability_cal": 1.54,
+          "min_stability_cal": 1.51,
+          "rail_exit_fps": 44.32,
+          "deploy_fps": 34.15,
+          "liftoff_g": 597.99,
+          "max_accel_g": 5.5,
+          "thrust_to_weight": 4.3,
+          "score": 24.9,
+          "problems": [
+            "leaves the rail at 44 ft/s (< 45)",
+            "thrust-to-weight 4.3 (< 5)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 792.1,
+          "apogee_sd_ft": 45.8,
+          "duration_mean_s": 40.9,
+          "duration_sd_s": 2.24,
+          "altitude_error_mean_ft": 36.2,
+          "score_mean": 42.1,
+          "score_p90": 86.6,
+          "min_stability_cal": 1.47,
+          "min_rail_exit_fps": 40.7
+        }
+      },
+      "sold_as": [
+        "Aerotech",
+        "Estes"
+      ],
+      "feasible": true,
+      "risk_flags": [
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "slow off the rail"
+      ],
+      "risk": 3,
+      "expected_score": 42.1,
+      "rank_key": [
+        0,
+        3,
+        42.1
+      ]
+    },
+    {
+      "designation": "F67W",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 61.1,
+      "database_motor": "AeroTech F67W",
+      "database_impulse_ns": 62.1,
+      "thrust_scale": 0.984,
+      "average_thrust_n": 72.1,
+      "burn_time_s": 0.85,
+      "launch_mass_g": 80.0,
+      "delays_s": [
+        4.0,
+        6.0,
+        9.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 179.7,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.93,
+          "apogee_ft": 799.95,
+          "duration_s": 40.47,
+          "stability_cal": 2.37,
+          "min_stability_cal": 2.03,
+          "rail_exit_fps": 68.32,
+          "deploy_fps": 5.33,
+          "liftoff_g": 652.09,
+          "max_accel_g": 12.26,
+          "thrust_to_weight": 11.3,
+          "score": 1.9,
+          "problems": [
+            "liftoff 652 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 172.6,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.77,
+          "apogee_ft": 775.28,
+          "duration_s": 41.19,
+          "stability_cal": 2.37,
+          "min_stability_cal": 1.99,
+          "rail_exit_fps": 68.32,
+          "deploy_fps": 9.16,
+          "liftoff_g": 644.99,
+          "max_accel_g": 12.38,
+          "thrust_to_weight": 11.4,
+          "score": 5.0,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 122.9,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.87,
+          "apogee_ft": 826.55,
+          "duration_s": 45.06,
+          "stability_cal": 2.07,
+          "min_stability_cal": 1.66,
+          "rail_exit_fps": 71.07,
+          "deploy_fps": 5.71,
+          "liftoff_g": 595.29,
+          "max_accel_g": 13.48,
+          "thrust_to_weight": 12.4,
+          "score": 21.8,
+          "problems": []
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 793.1,
+          "apogee_sd_ft": 42.2,
+          "duration_mean_s": 40.1,
+          "duration_sd_s": 1.88,
+          "altitude_error_mean_ft": 29.7,
+          "score_mean": 33.2,
+          "score_p90": 68.9,
+          "min_stability_cal": 2.05,
+          "min_rail_exit_fps": 63.9
+        }
+      },
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "over the mass limit"
+      ],
+      "risk": 0,
+      "expected_score": 33.2,
+      "rank_key": [
+        1,
+        0,
+        33.2
+      ]
+    },
+    {
+      "designation": "F52C",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 66.2,
+      "database_motor": "AeroTech F52C",
+      "database_impulse_ns": 66.3,
+      "thrust_scale": 0.998,
+      "average_thrust_n": 52.7,
+      "burn_time_s": 1.25,
+      "launch_mass_g": 81.4,
+      "delays_s": [
+        5.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 236.7,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.79,
+          "apogee_ft": 797.34,
+          "duration_s": 39.0,
+          "stability_cal": 2.62,
+          "min_stability_cal": -4.04,
+          "rail_exit_fps": 53.17,
+          "deploy_fps": 26.9,
+          "liftoff_g": 710.49,
+          "max_accel_g": 7.79,
+          "thrust_to_weight": 7.6,
+          "score": 2.7,
+          "problems": [
+            "liftoff 710 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 232.0,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.64,
+          "apogee_ft": 776.36,
+          "duration_s": 39.83,
+          "stability_cal": 2.65,
+          "min_stability_cal": -4.06,
+          "rail_exit_fps": 53.55,
+          "deploy_fps": 21.79,
+          "liftoff_g": 705.79,
+          "max_accel_g": 7.83,
+          "thrust_to_weight": 7.6,
+          "score": 1.4,
+          "problems": [
+            "liftoff 706 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 184.9,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.76,
+          "apogee_ft": 826.92,
+          "duration_s": 43.25,
+          "stability_cal": 2.36,
+          "min_stability_cal": -4.32,
+          "rail_exit_fps": 55.28,
+          "deploy_fps": 25.25,
+          "liftoff_g": 658.69,
+          "max_accel_g": 8.46,
+          "thrust_to_weight": 8.2,
+          "score": 14.9,
+          "problems": [
+            "liftoff 659 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 793.9,
+          "apogee_sd_ft": 38.3,
+          "duration_mean_s": 38.7,
+          "duration_sd_s": 1.5,
+          "altitude_error_mean_ft": 33.0,
+          "score_mean": 34.0,
+          "score_p90": 58.1,
+          "min_stability_cal": 2.27,
+          "min_rail_exit_fps": 51.4
+        }
+      },
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "over the mass limit"
+      ],
+      "risk": 0,
+      "expected_score": 34.0,
+      "rank_key": [
+        1,
+        0,
+        34.0
+      ]
+    },
+    {
+      "designation": "F50T",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 80.0,
+      "database_motor": "AeroTech F50T",
+      "database_impulse_ns": 76.3,
+      "thrust_scale": 1.049,
+      "average_thrust_n": 58.3,
+      "burn_time_s": 1.37,
+      "launch_mass_g": 84.9,
+      "delays_s": [
+        4.0,
+        6.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.29,
+          "apogee_ft": 1014.26,
+          "duration_s": 48.09,
+          "stability_cal": 2.73,
+          "min_stability_cal": -3.94,
+          "rail_exit_fps": 61.06,
+          "deploy_fps": 11.53,
+          "liftoff_g": 727.29,
+          "max_accel_g": 10.4,
+          "thrust_to_weight": 8.2,
+          "score": 246.6,
+          "problems": [
+            "still 214 ft high with 250 g ballast",
+            "liftoff 727 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.09,
+          "apogee_ft": 970.6,
+          "duration_s": 48.24,
+          "stability_cal": 2.7,
+          "min_stability_cal": -3.94,
+          "rail_exit_fps": 61.03,
+          "deploy_fps": 8.02,
+          "liftoff_g": 727.29,
+          "max_accel_g": 10.38,
+          "thrust_to_weight": 8.2,
+          "score": 228.6,
+          "problems": [
+            "still 196 ft high with 250 g ballast",
+            "liftoff 727 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.09,
+          "apogee_ft": 970.54,
+          "duration_s": 48.24,
+          "stability_cal": 2.7,
+          "min_stability_cal": -3.94,
+          "rail_exit_fps": 61.03,
+          "deploy_fps": 8.39,
+          "liftoff_g": 727.29,
+          "max_accel_g": 10.37,
+          "thrust_to_weight": 8.2,
+          "score": 178.5,
+          "problems": [
+            "still 146 ft high with 250 g ballast",
+            "liftoff 727 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech",
+        "Estes"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "needs more ballast than allowed",
+        "over the mass limit"
+      ],
+      "risk": 0,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        0,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F42T",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 52.9,
+      "database_motor": "AeroTech F42T/L",
+      "database_impulse_ns": 55.9,
+      "thrust_scale": 0.947,
+      "average_thrust_n": 40.6,
+      "burn_time_s": 1.3,
+      "launch_mass_g": 76.0,
+      "delays_s": [
+        4.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 44.2,
+          "delay_s": 4.0,
+          "optimum_delay_s": 5.36,
+          "apogee_ft": 798.88,
+          "duration_s": 44.07,
+          "stability_cal": 1.37,
+          "min_stability_cal": -5.36,
+          "rail_exit_fps": 66.08,
+          "deploy_fps": 44.65,
+          "liftoff_g": 512.59,
+          "max_accel_g": 11.95,
+          "thrust_to_weight": 8.1,
+          "score": 17.4,
+          "problems": [
+            "chute opens at 45 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 37.5,
+          "delay_s": 4.0,
+          "optimum_delay_s": 5.18,
+          "apogee_ft": 774.85,
+          "duration_s": 45.07,
+          "stability_cal": 1.3,
+          "min_stability_cal": -5.43,
+          "rail_exit_fps": 66.29,
+          "deploy_fps": 38.63,
+          "liftoff_g": 505.89,
+          "max_accel_g": 12.12,
+          "thrust_to_weight": 8.2,
+          "score": 20.4,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 5.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 5.26,
+          "apogee_ft": 822.26,
+          "duration_s": 46.2,
+          "stability_cal": 1.0,
+          "min_stability_cal": 0.62,
+          "rail_exit_fps": 68.83,
+          "deploy_fps": 62.3,
+          "liftoff_g": 474.29,
+          "max_accel_g": 12.99,
+          "thrust_to_weight": 8.7,
+          "score": 27.5,
+          "problems": [
+            "falls 3 ft short with the 5.9 g ballast needed for stability",
+            "chute opens at 62 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 793.3,
+          "apogee_sd_ft": 31.2,
+          "duration_mean_s": 43.8,
+          "duration_sd_s": 1.45,
+          "altitude_error_mean_ft": 23.3,
+          "score_mean": 38.4,
+          "score_p90": 65.9,
+          "min_stability_cal": 0.95,
+          "min_rail_exit_fps": 63.2
+        }
+      },
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum"
+      ],
+      "risk": 1,
+      "expected_score": 38.4,
+      "rank_key": [
+        1,
+        1,
+        38.4
+      ]
+    },
+    {
+      "designation": "F25W",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 80.0,
+      "database_motor": "AeroTech F25W",
+      "database_impulse_ns": 70.8,
+      "thrust_scale": 1.13,
+      "average_thrust_n": 33.4,
+      "burn_time_s": 2.38,
+      "launch_mass_g": 97.2,
+      "delays_s": [
+        4.0,
+        6.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.35,
+          "apogee_ft": 992.69,
+          "duration_s": 47.23,
+          "stability_cal": 2.57,
+          "min_stability_cal": 2.35,
+          "rail_exit_fps": 53.7,
+          "deploy_fps": 23.32,
+          "liftoff_g": 739.59,
+          "max_accel_g": 7.99,
+          "thrust_to_weight": 4.6,
+          "score": 221.6,
+          "problems": [
+            "still 193 ft high with 250 g ballast",
+            "thrust-to-weight 4.6 (< 5)",
+            "liftoff 740 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.16,
+          "apogee_ft": 954.21,
+          "duration_s": 47.45,
+          "stability_cal": 2.56,
+          "min_stability_cal": 2.34,
+          "rail_exit_fps": 53.67,
+          "deploy_fps": 28.1,
+          "liftoff_g": 739.59,
+          "max_accel_g": 7.99,
+          "thrust_to_weight": 4.6,
+          "score": 209.0,
+          "problems": [
+            "still 179 ft high with 250 g ballast",
+            "thrust-to-weight 4.6 (< 5)",
+            "liftoff 740 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.16,
+          "apogee_ft": 953.86,
+          "duration_s": 47.42,
+          "stability_cal": 2.56,
+          "min_stability_cal": 2.34,
+          "rail_exit_fps": 53.67,
+          "deploy_fps": 28.46,
+          "liftoff_g": 739.59,
+          "max_accel_g": 7.99,
+          "thrust_to_weight": 4.6,
+          "score": 158.6,
+          "problems": [
+            "still 129 ft high with 250 g ballast",
+            "thrust-to-weight 4.6 (< 5)",
+            "liftoff 740 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "low thrust-to-weight",
+        "needs more ballast than allowed",
+        "over the mass limit"
+      ],
+      "risk": 1,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        1,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F67C",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 77.5,
+      "database_motor": "AeroTech F67C",
+      "database_impulse_ns": 77.4,
+      "thrust_scale": 1.002,
+      "average_thrust_n": 55.3,
+      "burn_time_s": 1.4,
+      "launch_mass_g": 85.7,
+      "delays_s": [
+        6.0,
+        9.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.3,
+          "apogee_ft": 965.25,
+          "duration_s": 43.59,
+          "stability_cal": 2.7,
+          "min_stability_cal": 2.44,
+          "rail_exit_fps": 53.75,
+          "deploy_fps": 78.37,
+          "liftoff_g": 728.06,
+          "max_accel_g": 8.42,
+          "thrust_to_weight": 7.7,
+          "score": 179.6,
+          "problems": [
+            "still 165 ft high with 250 g ballast",
+            "chute opens at 78 ft/s with the 6 s delay",
+            "liftoff 728 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.11,
+          "apogee_ft": 925.99,
+          "duration_s": 43.07,
+          "stability_cal": 2.68,
+          "min_stability_cal": 2.46,
+          "rail_exit_fps": 53.72,
+          "deploy_fps": 84.11,
+          "liftoff_g": 728.06,
+          "max_accel_g": 8.37,
+          "thrust_to_weight": 7.7,
+          "score": 163.3,
+          "problems": [
+            "still 151 ft high with 250 g ballast",
+            "chute opens at 84 ft/s with the 6 s delay",
+            "liftoff 728 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.1,
+          "apogee_ft": 923.94,
+          "duration_s": 42.9,
+          "stability_cal": 2.64,
+          "min_stability_cal": 2.5,
+          "rail_exit_fps": 53.71,
+          "deploy_fps": 85.65,
+          "liftoff_g": 728.06,
+          "max_accel_g": 8.37,
+          "thrust_to_weight": 7.7,
+          "score": 110.5,
+          "problems": [
+            "still 99 ft high with 250 g ballast",
+            "chute opens at 86 ft/s with the 6 s delay",
+            "liftoff 728 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "needs more ballast than allowed",
+        "no delay near the optimum",
+        "over the mass limit"
+      ],
+      "risk": 1,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        1,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F31CL",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 55.5,
+      "database_motor": "Cesaroni Technology Inc. 56F31-12A",
+      "database_impulse_ns": 55.6,
+      "thrust_scale": 0.998,
+      "average_thrust_n": 31.0,
+      "burn_time_s": 1.79,
+      "launch_mass_g": 102.0,
+      "delays_s": [
+        3.0,
+        5.0,
+        7.0,
+        9.0
+      ],
+      "delay_kind": "adjustable up to 12 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 60.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.37,
+          "apogee_ft": 801.43,
+          "duration_s": 43.81,
+          "stability_cal": 1.25,
+          "min_stability_cal": -5.43,
+          "rail_exit_fps": 45.89,
+          "deploy_fps": 13.21,
+          "liftoff_g": 555.19,
+          "max_accel_g": 10.76,
+          "thrust_to_weight": 5.7,
+          "score": 16.7,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 53.9,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.2,
+          "apogee_ft": 775.11,
+          "duration_s": 44.61,
+          "stability_cal": 1.11,
+          "min_stability_cal": -5.49,
+          "rail_exit_fps": 46.16,
+          "deploy_fps": 10.48,
+          "liftoff_g": 548.29,
+          "max_accel_g": 10.9,
+          "thrust_to_weight": 5.8,
+          "score": 18.5,
+          "problems": []
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 44.9,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.26,
+          "apogee_ft": 786.79,
+          "duration_s": 41.3,
+          "stability_cal": 1.04,
+          "min_stability_cal": 0.8,
+          "rail_exit_fps": 46.69,
+          "deploy_fps": 53.76,
+          "liftoff_g": 539.29,
+          "max_accel_g": 11.1,
+          "thrust_to_weight": 5.9,
+          "score": 43.4,
+          "problems": [
+            "falls 38 ft short with the 44.9 g ballast needed for stability",
+            "chute opens at 54 ft/s with the 5 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 794.4,
+          "apogee_sd_ft": 45.1,
+          "duration_mean_s": 43.3,
+          "duration_sd_s": 2.22,
+          "altitude_error_mean_ft": 38.4,
+          "score_mean": 51.9,
+          "score_p90": 85.0,
+          "min_stability_cal": 0.73,
+          "min_rail_exit_fps": 44.5
+        }
+      },
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 2,
+      "expected_score": 51.9,
+      "rank_key": [
+        1,
+        2,
+        51.9
+      ]
+    },
+    {
+      "designation": "E24C",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 36.3,
+      "database_motor": "AeroTech E24C",
+      "database_impulse_ns": 37.5,
+      "thrust_scale": 0.968,
+      "average_thrust_n": 22.1,
+      "burn_time_s": 1.64,
+      "launch_mass_g": 70.7,
+      "delays_s": [
+        4.0,
+        7.0,
+        10.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 9.8,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.38,
+          "apogee_ft": 529.88,
+          "duration_s": 24.66,
+          "stability_cal": 1.02,
+          "min_stability_cal": 0.65,
+          "rail_exit_fps": 46.77,
+          "deploy_fps": 69.37,
+          "liftoff_g": 472.84,
+          "max_accel_g": 6.2,
+          "thrust_to_weight": 4.8,
+          "score": 319.5,
+          "problems": [
+            "falls 270 ft short with the 9.8 g ballast needed for stability",
+            "thrust-to-weight 4.8 (< 5)",
+            "chute opens at 69 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 11.7,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.24,
+          "apogee_ft": 507.82,
+          "duration_s": 24.71,
+          "stability_cal": 1.01,
+          "min_stability_cal": 0.67,
+          "rail_exit_fps": 46.51,
+          "deploy_fps": 63.66,
+          "liftoff_g": 474.74,
+          "max_accel_g": 6.15,
+          "thrust_to_weight": 4.8,
+          "score": 316.4,
+          "problems": [
+            "falls 267 ft short with the 11.7 g ballast needed for stability",
+            "thrust-to-weight 4.8 (< 5)",
+            "chute opens at 64 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 13.7,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.23,
+          "apogee_ft": 505.93,
+          "duration_s": 24.7,
+          "stability_cal": 1.04,
+          "min_stability_cal": 0.69,
+          "rail_exit_fps": 46.27,
+          "deploy_fps": 62.22,
+          "liftoff_g": 476.74,
+          "max_accel_g": 6.12,
+          "thrust_to_weight": 4.7,
+          "score": 368.3,
+          "problems": [
+            "falls 319 ft short with the 13.7 g ballast needed for stability",
+            "thrust-to-weight 4.7 (< 5)",
+            "chute opens at 62 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum"
+      ],
+      "risk": 2,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        2,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F37W",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 50.0,
+      "database_motor": "AeroTech F37W",
+      "database_impulse_ns": 50.7,
+      "thrust_scale": 0.987,
+      "average_thrust_n": 32.2,
+      "burn_time_s": 1.55,
+      "launch_mass_g": 108.6,
+      "delays_s": [
+        6.0,
+        10.0,
+        14.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 50.8,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.19,
+          "apogee_ft": 699.87,
+          "duration_s": 29.04,
+          "stability_cal": 1.02,
+          "min_stability_cal": 0.75,
+          "rail_exit_fps": 47.1,
+          "deploy_fps": 63.48,
+          "liftoff_g": 551.79,
+          "max_accel_g": 7.39,
+          "thrust_to_weight": 6.0,
+          "score": 132.0,
+          "problems": [
+            "falls 100 ft short with the 50.8 g ballast needed for stability",
+            "chute opens at 63 ft/s with the 6 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 52.7,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.02,
+          "apogee_ft": 670.77,
+          "duration_s": 28.9,
+          "stability_cal": 1.08,
+          "min_stability_cal": 0.77,
+          "rail_exit_fps": 46.88,
+          "deploy_fps": 59.48,
+          "liftoff_g": 553.69,
+          "max_accel_g": 7.33,
+          "thrust_to_weight": 5.9,
+          "score": 136.6,
+          "problems": [
+            "falls 104 ft short with the 52.7 g ballast needed for stability",
+            "chute opens at 59 ft/s with the 6 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 50.8,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.02,
+          "apogee_ft": 672.31,
+          "duration_s": 28.89,
+          "stability_cal": 1.01,
+          "min_stability_cal": 0.75,
+          "rail_exit_fps": 47.07,
+          "deploy_fps": 63.12,
+          "liftoff_g": 551.79,
+          "max_accel_g": 7.36,
+          "thrust_to_weight": 6.0,
+          "score": 185.1,
+          "problems": [
+            "falls 153 ft short with the 50.8 g ballast needed for stability",
+            "chute opens at 63 ft/s with the 6 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 2,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        2,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F40W",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 80.0,
+      "database_motor": "AeroTech F40W",
+      "database_impulse_ns": 78.1,
+      "thrust_scale": 1.024,
+      "average_thrust_n": 41.3,
+      "burn_time_s": 1.93,
+      "launch_mass_g": 126.0,
+      "delays_s": [
+        4.0,
+        7.0,
+        10.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 250.0,
+          "delay_s": 7.0,
+          "optimum_delay_s": 5.79,
+          "apogee_ft": 956.56,
+          "duration_s": 38.1,
+          "stability_cal": 2.33,
+          "min_stability_cal": 2.12,
+          "rail_exit_fps": 54.99,
+          "deploy_fps": 116.55,
+          "liftoff_g": 768.39,
+          "max_accel_g": 8.28,
+          "thrust_to_weight": 5.5,
+          "score": 156.6,
+          "problems": [
+            "still 157 ft high with 250 g ballast",
+            "chute opens at 117 ft/s with the 7 s delay",
+            "liftoff 768 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 250.0,
+          "delay_s": 7.0,
+          "optimum_delay_s": 5.6,
+          "apogee_ft": 919.39,
+          "duration_s": 37.36,
+          "stability_cal": 2.34,
+          "min_stability_cal": 2.1,
+          "rail_exit_fps": 54.97,
+          "deploy_fps": 118.18,
+          "liftoff_g": 768.39,
+          "max_accel_g": 8.28,
+          "thrust_to_weight": 5.5,
+          "score": 144.4,
+          "problems": [
+            "still 144 ft high with 250 g ballast",
+            "chute opens at 118 ft/s with the 7 s delay",
+            "liftoff 768 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 250.0,
+          "delay_s": 7.0,
+          "optimum_delay_s": 5.61,
+          "apogee_ft": 921.28,
+          "duration_s": 37.81,
+          "stability_cal": 2.38,
+          "min_stability_cal": 2.09,
+          "rail_exit_fps": 54.97,
+          "deploy_fps": 115.17,
+          "liftoff_g": 768.39,
+          "max_accel_g": 8.28,
+          "thrust_to_weight": 5.5,
+          "score": 96.3,
+          "problems": [
+            "still 96 ft high with 250 g ballast",
+            "chute opens at 115 ft/s with the 7 s delay",
+            "liftoff 768 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "needs more ballast than allowed",
+        "no delay near the optimum",
+        "over the mass limit",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 2,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        2,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F52T",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 78.0,
+      "database_motor": "AeroTech F52T",
+      "database_impulse_ns": 73.0,
+      "thrust_scale": 1.069,
+      "average_thrust_n": 57.3,
+      "burn_time_s": 1.36,
+      "launch_mass_g": 121.4,
+      "delays_s": [
+        6.0,
+        8.0,
+        11.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 6.16,
+          "apogee_ft": 940.63,
+          "duration_s": 35.38,
+          "stability_cal": 2.43,
+          "min_stability_cal": 2.1,
+          "rail_exit_fps": 62.03,
+          "deploy_fps": 125.61,
+          "liftoff_g": 763.79,
+          "max_accel_g": 10.31,
+          "thrust_to_weight": 7.7,
+          "score": 147.1,
+          "problems": [
+            "still 141 ft high with 250 g ballast",
+            "chute opens at 126 ft/s with the 6 s delay",
+            "liftoff 764 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.98,
+          "apogee_ft": 904.2,
+          "duration_s": 34.21,
+          "stability_cal": 2.42,
+          "min_stability_cal": 2.1,
+          "rail_exit_fps": 62.0,
+          "deploy_fps": 129.08,
+          "liftoff_g": 763.79,
+          "max_accel_g": 10.3,
+          "thrust_to_weight": 7.7,
+          "score": 140.4,
+          "problems": [
+            "still 129 ft high with 250 g ballast",
+            "chute opens at 129 ft/s with the 6 s delay",
+            "liftoff 764 g (> 650 g ARC limit)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 250.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.98,
+          "apogee_ft": 904.71,
+          "duration_s": 34.43,
+          "stability_cal": 2.47,
+          "min_stability_cal": 2.1,
+          "rail_exit_fps": 62.01,
+          "deploy_fps": 127.87,
+          "liftoff_g": 763.79,
+          "max_accel_g": 10.3,
+          "thrust_to_weight": 7.7,
+          "score": 90.0,
+          "problems": [
+            "still 80 ft high with 250 g ballast",
+            "chute opens at 128 ft/s with the 6 s delay",
+            "liftoff 764 g (> 650 g ARC limit)"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "needs more ballast than allowed",
+        "no delay near the optimum",
+        "over the mass limit",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 2,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        2,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F36SS",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 41.2,
+      "database_motor": "Cesaroni Technology Inc. 41F36-11A",
+      "database_impulse_ns": 41.8,
+      "thrust_scale": 0.985,
+      "average_thrust_n": 40.4,
+      "burn_time_s": 1.02,
+      "launch_mass_g": 104.0,
+      "delays_s": [
+        2.0,
+        4.0,
+        6.0,
+        8.0,
+        11.0
+      ],
+      "delay_kind": "adjustable up to 11 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 39.1,
+          "delay_s": 4.0,
+          "optimum_delay_s": 5.0,
+          "apogee_ft": 572.23,
+          "duration_s": 25.95,
+          "stability_cal": 1.04,
+          "min_stability_cal": 0.76,
+          "rail_exit_fps": 50.73,
+          "deploy_fps": 60.65,
+          "liftoff_g": 535.49,
+          "max_accel_g": 13.85,
+          "thrust_to_weight": 7.7,
+          "score": 272.0,
+          "problems": [
+            "falls 228 ft short with the 39.1 g ballast needed for stability",
+            "chute opens at 61 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 43.0,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.85,
+          "apogee_ft": 546.08,
+          "duration_s": 25.6,
+          "stability_cal": 1.04,
+          "min_stability_cal": 0.8,
+          "rail_exit_fps": 50.67,
+          "deploy_fps": 55.34,
+          "liftoff_g": 539.39,
+          "max_accel_g": 13.74,
+          "thrust_to_weight": 7.6,
+          "score": 274.5,
+          "problems": [
+            "falls 229 ft short with the 43 g ballast needed for stability",
+            "chute opens at 55 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 41.0,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.86,
+          "apogee_ft": 548.95,
+          "duration_s": 25.72,
+          "stability_cal": 1.02,
+          "min_stability_cal": 0.78,
+          "rail_exit_fps": 50.89,
+          "deploy_fps": 56.43,
+          "liftoff_g": 537.39,
+          "max_accel_g": 13.8,
+          "thrust_to_weight": 7.7,
+          "score": 321.2,
+          "problems": [
+            "falls 276 ft short with the 41 g ballast needed for stability",
+            "chute opens at 56 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 2,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        2,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F20W",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 51.8,
+      "database_motor": "AeroTech F20W/L",
+      "database_impulse_ns": 51.7,
+      "thrust_scale": 1.001,
+      "average_thrust_n": 22.3,
+      "burn_time_s": 2.32,
+      "launch_mass_g": 80.1,
+      "delays_s": [
+        4.0,
+        7.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 30.8,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.66,
+          "apogee_ft": 799.74,
+          "duration_s": 45.37,
+          "stability_cal": 1.11,
+          "min_stability_cal": -5.51,
+          "rail_exit_fps": 50.43,
+          "deploy_fps": 22.61,
+          "liftoff_g": 503.29,
+          "max_accel_g": 7.19,
+          "thrust_to_weight": 4.5,
+          "score": 21.8,
+          "problems": [
+            "thrust-to-weight 4.5 (< 5)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 24.4,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.49,
+          "apogee_ft": 775.82,
+          "duration_s": 46.38,
+          "stability_cal": 1.02,
+          "min_stability_cal": -5.57,
+          "rail_exit_fps": 50.73,
+          "deploy_fps": 17.21,
+          "liftoff_g": 496.89,
+          "max_accel_g": 7.3,
+          "thrust_to_weight": 4.6,
+          "score": 26.3,
+          "problems": [
+            "thrust-to-weight 4.6 (< 5)"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 19.5,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.55,
+          "apogee_ft": 783.46,
+          "duration_s": 44.67,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.75,
+          "rail_exit_fps": 50.89,
+          "deploy_fps": 61.82,
+          "liftoff_g": 491.99,
+          "max_accel_g": 7.38,
+          "thrust_to_weight": 4.6,
+          "score": 60.2,
+          "problems": [
+            "falls 42 ft short with the 19.5 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "thrust-to-weight 4.6 (< 5)",
+            "chute opens at 62 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {
+        "800": {
+          "apogee_mean_ft": 790.6,
+          "apogee_sd_ft": 38.6,
+          "duration_mean_s": 44.9,
+          "duration_sd_s": 1.77,
+          "altitude_error_mean_ft": 32.4,
+          "score_mean": 52.1,
+          "score_p90": 74.9,
+          "min_stability_cal": 0.69,
+          "min_rail_exit_fps": 47.0
+        }
+      },
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "unstable"
+      ],
+      "risk": 3,
+      "expected_score": 52.1,
+      "rank_key": [
+        1,
+        3,
+        52.1
+      ]
+    },
+    {
+      "designation": "E23T",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 37.0,
+      "database_motor": "AeroTech E23T",
+      "database_impulse_ns": 35.3,
+      "thrust_scale": 1.047,
+      "average_thrust_n": 24.9,
+      "burn_time_s": 1.48,
+      "launch_mass_g": 103.9,
+      "delays_s": [
+        5.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 37.1,
+          "delay_s": 5.0,
+          "optimum_delay_s": 4.18,
+          "apogee_ft": 479.13,
+          "duration_s": 23.01,
+          "stability_cal": 1.01,
+          "min_stability_cal": 0.59,
+          "rail_exit_fps": 49.89,
+          "deploy_fps": 76.99,
+          "liftoff_g": 533.39,
+          "max_accel_g": 6.66,
+          "thrust_to_weight": 4.8,
+          "score": 376.8,
+          "problems": [
+            "falls 321 ft short with the 37.1 g ballast needed for stability",
+            "thrust-to-weight 4.8 (< 5)",
+            "chute opens at 77 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 43.0,
+          "delay_s": 5.0,
+          "optimum_delay_s": 4.05,
+          "apogee_ft": 457.73,
+          "duration_s": 22.73,
+          "stability_cal": 1.0,
+          "min_stability_cal": 0.65,
+          "rail_exit_fps": 49.63,
+          "deploy_fps": 71.14,
+          "liftoff_g": 539.29,
+          "max_accel_g": 6.57,
+          "thrust_to_weight": 4.7,
+          "score": 374.4,
+          "problems": [
+            "falls 317 ft short with the 43 g ballast needed for stability",
+            "thrust-to-weight 4.7 (< 5)",
+            "chute opens at 71 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 43.0,
+          "delay_s": 5.0,
+          "optimum_delay_s": 4.04,
+          "apogee_ft": 456.66,
+          "duration_s": 22.66,
+          "stability_cal": 1.01,
+          "min_stability_cal": 0.65,
+          "rail_exit_fps": 49.63,
+          "deploy_fps": 71.43,
+          "liftoff_g": 539.29,
+          "max_accel_g": 6.57,
+          "thrust_to_weight": 4.7,
+          "score": 425.7,
+          "problems": [
+            "falls 368 ft short with the 43 g ballast needed for stability",
+            "thrust-to-weight 4.7 (< 5)",
+            "chute opens at 71 ft/s with the 5 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)"
+      ],
+      "risk": 3,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        3,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F27R",
+      "manufacturer": "Aerotech",
+      "reloadable": false,
+      "nar_impulse_ns": 49.6,
+      "database_motor": "AeroTech F27R/L",
+      "database_impulse_ns": 49.5,
+      "thrust_scale": 1.002,
+      "average_thrust_n": 24.1,
+      "burn_time_s": 2.05,
+      "launch_mass_g": 80.0,
+      "delays_s": [
+        4.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 25.4,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.62,
+          "apogee_ft": 767.03,
+          "duration_s": 40.27,
+          "stability_cal": 1.08,
+          "min_stability_cal": 0.8,
+          "rail_exit_fps": 48.0,
+          "deploy_fps": 56.26,
+          "liftoff_g": 497.79,
+          "max_accel_g": 6.37,
+          "thrust_to_weight": 4.9,
+          "score": 34.1,
+          "problems": [
+            "falls 33 ft short with the 25.4 g ballast needed for stability",
+            "thrust-to-weight 4.9 (< 5)",
+            "chute opens at 56 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 23.4,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.44,
+          "apogee_ft": 735.99,
+          "duration_s": 40.19,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.78,
+          "rail_exit_fps": 48.18,
+          "deploy_fps": 53.92,
+          "liftoff_g": 495.79,
+          "max_accel_g": 6.38,
+          "thrust_to_weight": 5.0,
+          "score": 39.8,
+          "problems": [
+            "falls 39 ft short with the 23.4 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "chute opens at 54 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 21.5,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.44,
+          "apogee_ft": 738.45,
+          "duration_s": 40.31,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.76,
+          "rail_exit_fps": 48.4,
+          "deploy_fps": 56.43,
+          "liftoff_g": 493.89,
+          "max_accel_g": 6.41,
+          "thrust_to_weight": 5.0,
+          "score": 87.8,
+          "problems": [
+            "falls 87 ft short with the 21.5 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "chute opens at 56 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "unstable"
+      ],
+      "risk": 3,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        3,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F29",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 54.8,
+      "database_motor": "Cesaroni Technology Inc. 55F29-12A",
+      "database_impulse_ns": 54.2,
+      "thrust_scale": 1.01,
+      "average_thrust_n": 27.8,
+      "burn_time_s": 1.97,
+      "launch_mass_g": 105.8,
+      "delays_s": [
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        12.0
+      ],
+      "delay_kind": "adjustable up to 12 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 52.7,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.28,
+          "apogee_ft": 788.35,
+          "duration_s": 33.34,
+          "stability_cal": 1.11,
+          "min_stability_cal": 0.9,
+          "rail_exit_fps": 42.56,
+          "deploy_fps": 99.01,
+          "liftoff_g": 550.89,
+          "max_accel_g": 5.19,
+          "thrust_to_weight": 5.1,
+          "score": 26.3,
+          "problems": [
+            "falls 12 ft short with the 52.7 g ballast needed for stability",
+            "leaves the rail at 43 ft/s (< 45)",
+            "chute opens at 99 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 50.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.11,
+          "apogee_ft": 758.57,
+          "duration_s": 35.55,
+          "stability_cal": 1.05,
+          "min_stability_cal": 0.88,
+          "rail_exit_fps": 42.7,
+          "deploy_fps": 53.29,
+          "liftoff_g": 548.99,
+          "max_accel_g": 5.19,
+          "thrust_to_weight": 5.2,
+          "score": 22.2,
+          "problems": [
+            "falls 16 ft short with the 50.8 g ballast needed for stability",
+            "leaves the rail at 43 ft/s (< 45)",
+            "chute opens at 53 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 52.7,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.1,
+          "apogee_ft": 753.81,
+          "duration_s": 32.43,
+          "stability_cal": 1.06,
+          "min_stability_cal": 0.91,
+          "rail_exit_fps": 42.52,
+          "deploy_fps": 99.57,
+          "liftoff_g": 550.89,
+          "max_accel_g": 5.17,
+          "thrust_to_weight": 5.1,
+          "score": 89.5,
+          "problems": [
+            "falls 71 ft short with the 52.7 g ballast needed for stability",
+            "leaves the rail at 43 ft/s (< 45)",
+            "chute opens at 100 ft/s with the 5 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)",
+        "slow off the rail"
+      ],
+      "risk": 3,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        3,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F62T",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 51.0,
+      "database_motor": "AeroTech F62T",
+      "database_impulse_ns": 51.0,
+      "thrust_scale": 1.0,
+      "average_thrust_n": 51.3,
+      "burn_time_s": 0.99,
+      "launch_mass_g": 109.0,
+      "delays_s": [
+        6.0,
+        10.0,
+        14.0
+      ],
+      "delay_kind": "S/M/L = 6/10/14 s",
+      "note": "delay set S/M/L",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 43.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.64,
+          "apogee_ft": 742.94,
+          "duration_s": 30.22,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.62,
+          "rail_exit_fps": 60.98,
+          "deploy_fps": 70.16,
+          "liftoff_g": 544.39,
+          "max_accel_g": 10.16,
+          "thrust_to_weight": 9.6,
+          "score": 84.2,
+          "problems": [
+            "falls 57 ft short with the 43 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "chute opens at 70 ft/s with the 6 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 44.9,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.46,
+          "apogee_ft": 710.07,
+          "duration_s": 30.31,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.64,
+          "rail_exit_fps": 60.71,
+          "deploy_fps": 66.43,
+          "liftoff_g": 546.29,
+          "max_accel_g": 10.11,
+          "thrust_to_weight": 9.6,
+          "score": 91.7,
+          "problems": [
+            "falls 65 ft short with the 44.9 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "chute opens at 66 ft/s with the 6 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 43.0,
+          "delay_s": 6.0,
+          "optimum_delay_s": 5.46,
+          "apogee_ft": 712.22,
+          "duration_s": 30.35,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.62,
+          "rail_exit_fps": 60.95,
+          "deploy_fps": 66.27,
+          "liftoff_g": 544.39,
+          "max_accel_g": 10.15,
+          "thrust_to_weight": 9.6,
+          "score": 139.4,
+          "problems": [
+            "falls 113 ft short with the 43 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "chute opens at 66 ft/s with the 6 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)",
+        "unstable"
+      ],
+      "risk": 3,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        3,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F36BS",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 51.5,
+      "database_motor": "Cesaroni Technology Inc. 51F36-14A",
+      "database_impulse_ns": 52.1,
+      "thrust_scale": 0.988,
+      "average_thrust_n": 36.8,
+      "burn_time_s": 1.4,
+      "launch_mass_g": 101.0,
+      "delays_s": [
+        5.0,
+        7.0,
+        9.0,
+        11.0,
+        14.0
+      ],
+      "delay_kind": "adjustable up to 14 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 43.0,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.38,
+          "apogee_ft": 755.28,
+          "duration_s": 32.5,
+          "stability_cal": 1.07,
+          "min_stability_cal": 0.8,
+          "rail_exit_fps": 49.88,
+          "deploy_fps": 56.85,
+          "liftoff_g": 536.39,
+          "max_accel_g": 7.04,
+          "thrust_to_weight": 7.0,
+          "score": 62.7,
+          "problems": [
+            "falls 45 ft short with the 43 g ballast needed for stability",
+            "chute opens at 57 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 37.1,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.22,
+          "apogee_ft": 730.12,
+          "duration_s": 32.72,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.74,
+          "rail_exit_fps": 50.05,
+          "deploy_fps": 62.11,
+          "liftoff_g": 530.49,
+          "max_accel_g": 7.11,
+          "thrust_to_weight": 7.1,
+          "score": 62.0,
+          "problems": [
+            "falls 45 ft short with the 37.1 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "chute opens at 62 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 37.1,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.22,
+          "apogee_ft": 730.63,
+          "duration_s": 32.7,
+          "stability_cal": 1.03,
+          "min_stability_cal": 0.74,
+          "rail_exit_fps": 50.06,
+          "deploy_fps": 61.75,
+          "liftoff_g": 530.49,
+          "max_accel_g": 7.11,
+          "thrust_to_weight": 7.1,
+          "score": 111.6,
+          "problems": [
+            "falls 94 ft short with the 37.1 g ballast needed for stability",
+            "chute opens at 62 ft/s with the 5 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)",
+        "unstable"
+      ],
+      "risk": 3,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        3,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "E16",
+      "manufacturer": "Estes",
+      "reloadable": false,
+      "nar_impulse_ns": 33.4,
+      "database_motor": "Estes E16",
+      "database_impulse_ns": 33.6,
+      "thrust_scale": 0.993,
+      "average_thrust_n": 17.2,
+      "burn_time_s": 1.94,
+      "launch_mass_g": 82.0,
+      "delays_s": [
+        0.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 25.4,
+          "delay_s": 4.0,
+          "optimum_delay_s": 3.95,
+          "apogee_ft": 416.37,
+          "duration_s": 22.32,
+          "stability_cal": 1.03,
+          "min_stability_cal": 0.96,
+          "rail_exit_fps": 38.05,
+          "deploy_fps": 51.17,
+          "liftoff_g": 499.79,
+          "max_accel_g": 4.41,
+          "thrust_to_weight": 3.5,
+          "score": 442.3,
+          "problems": [
+            "falls 384 ft short with the 25.4 g ballast needed for stability",
+            "leaves the rail at 38 ft/s (< 45)",
+            "thrust-to-weight 3.5 (< 5)",
+            "chute opens at 51 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 21.5,
+          "delay_s": 4.0,
+          "optimum_delay_s": 3.89,
+          "apogee_ft": 410.46,
+          "duration_s": 22.62,
+          "stability_cal": 1.06,
+          "min_stability_cal": 0.9,
+          "rail_exit_fps": 38.43,
+          "deploy_fps": 47.22,
+          "liftoff_g": 495.89,
+          "max_accel_g": 4.45,
+          "thrust_to_weight": 3.5,
+          "score": 422.0,
+          "problems": [
+            "falls 365 ft short with the 21.5 g ballast needed for stability",
+            "leaves the rail at 38 ft/s (< 45)",
+            "thrust-to-weight 3.5 (< 5)",
+            "chute opens at 47 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 23.4,
+          "delay_s": 4.0,
+          "optimum_delay_s": 3.86,
+          "apogee_ft": 405.63,
+          "duration_s": 18.52,
+          "stability_cal": 0.99,
+          "min_stability_cal": 0.99,
+          "rail_exit_fps": 38.22,
+          "deploy_fps": 105.45,
+          "liftoff_g": 497.79,
+          "max_accel_g": 4.42,
+          "thrust_to_weight": 3.5,
+          "score": 493.3,
+          "problems": [
+            "falls 419 ft short with the 23.4 g ballast needed for stability",
+            "stability 0.99 cal off the rail (< 1.0)",
+            "leaves the rail at 38 ft/s (< 45)",
+            "thrust-to-weight 3.5 (< 5)",
+            "chute opens at 105 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Estes"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "slow off the rail",
+        "unstable"
+      ],
+      "risk": 4,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        4,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "E16W",
+      "manufacturer": "Aerotech",
+      "reloadable": true,
+      "nar_impulse_ns": 40.0,
+      "database_motor": "AeroTech E16W",
+      "database_impulse_ns": 37.7,
+      "thrust_scale": 1.062,
+      "average_thrust_n": 22.1,
+      "burn_time_s": 1.8,
+      "launch_mass_g": 107.0,
+      "delays_s": [
+        4.0,
+        7.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 44.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.06,
+          "apogee_ft": 516.52,
+          "duration_s": 26.57,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.65,
+          "rail_exit_fps": 48.68,
+          "deploy_fps": 66.46,
+          "liftoff_g": 544.29,
+          "max_accel_g": 6.41,
+          "thrust_to_weight": 4.1,
+          "score": 325.2,
+          "problems": [
+            "falls 283 ft short with the 44.9 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "thrust-to-weight 4.1 (< 5)",
+            "chute opens at 66 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 44.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 3.95,
+          "apogee_ft": 501.17,
+          "duration_s": 26.61,
+          "stability_cal": 1.01,
+          "min_stability_cal": 0.65,
+          "rail_exit_fps": 48.66,
+          "deploy_fps": 64.82,
+          "liftoff_g": 544.29,
+          "max_accel_g": 6.41,
+          "thrust_to_weight": 4.1,
+          "score": 315.4,
+          "problems": [
+            "falls 274 ft short with the 44.9 g ballast needed for stability",
+            "thrust-to-weight 4.1 (< 5)",
+            "chute opens at 65 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 43.0,
+          "delay_s": 4.0,
+          "optimum_delay_s": 3.95,
+          "apogee_ft": 502.38,
+          "duration_s": 26.73,
+          "stability_cal": 0.95,
+          "min_stability_cal": 0.63,
+          "rail_exit_fps": 48.86,
+          "deploy_fps": 64.13,
+          "liftoff_g": 542.39,
+          "max_accel_g": 6.43,
+          "thrust_to_weight": 4.2,
+          "score": 363.7,
+          "problems": [
+            "falls 323 ft short with the 43 g ballast needed for stability",
+            "stability 0.95 cal off the rail (< 1.0)",
+            "thrust-to-weight 4.2 (< 5)",
+            "chute opens at 64 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Aerotech"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)",
+        "unstable"
+      ],
+      "risk": 4,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        4,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F15",
+      "manufacturer": "Estes",
+      "reloadable": false,
+      "nar_impulse_ns": 49.6,
+      "database_motor": "Estes F15",
+      "database_impulse_ns": 49.6,
+      "thrust_scale": 1.0,
+      "average_thrust_n": 14.5,
+      "burn_time_s": 3.42,
+      "launch_mass_g": 103.0,
+      "delays_s": [
+        0.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "delay_kind": "fixed",
+      "note": "",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 46.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.25,
+          "apogee_ft": 642.69,
+          "duration_s": 31.11,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.98,
+          "rail_exit_fps": 34.25,
+          "deploy_fps": 107.21,
+          "liftoff_g": 542.29,
+          "max_accel_g": 3.79,
+          "thrust_to_weight": 2.7,
+          "score": 180.9,
+          "problems": [
+            "falls 157 ft short with the 46.9 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "leaves the rail at 34 ft/s (< 45)",
+            "thrust-to-weight 2.7 (< 5)",
+            "chute opens at 107 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 46.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.11,
+          "apogee_ft": 620.28,
+          "duration_s": 30.43,
+          "stability_cal": 0.98,
+          "min_stability_cal": 0.98,
+          "rail_exit_fps": 34.22,
+          "deploy_fps": 108.45,
+          "liftoff_g": 542.29,
+          "max_accel_g": 3.79,
+          "thrust_to_weight": 2.7,
+          "score": 181.0,
+          "problems": [
+            "falls 155 ft short with the 46.9 g ballast needed for stability",
+            "stability 0.98 cal off the rail (< 1.0)",
+            "leaves the rail at 34 ft/s (< 45)",
+            "thrust-to-weight 2.7 (< 5)",
+            "chute opens at 108 ft/s with the 4 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 46.9,
+          "delay_s": 4.0,
+          "optimum_delay_s": 4.09,
+          "apogee_ft": 617.64,
+          "duration_s": 30.2,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.97,
+          "rail_exit_fps": 34.22,
+          "deploy_fps": 108.97,
+          "liftoff_g": 542.29,
+          "max_accel_g": 3.79,
+          "thrust_to_weight": 2.7,
+          "score": 234.6,
+          "problems": [
+            "falls 207 ft short with the 46.9 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "leaves the rail at 34 ft/s (< 45)",
+            "thrust-to-weight 2.7 (< 5)",
+            "chute opens at 109 ft/s with the 4 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Estes"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "low thrust-to-weight",
+        "no delay near the optimum",
+        "slow off the rail",
+        "unstable"
+      ],
+      "risk": 4,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        4,
+        9000000000.0
+      ]
+    },
+    {
+      "designation": "F32WH",
+      "manufacturer": "Cesaroni",
+      "reloadable": true,
+      "nar_impulse_ns": 52.8,
+      "database_motor": "Cesaroni Technology Inc. 53F32-12A",
+      "database_impulse_ns": 52.9,
+      "thrust_scale": 0.998,
+      "average_thrust_n": 31.1,
+      "burn_time_s": 1.7,
+      "launch_mass_g": 107.0,
+      "delays_s": [
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        12.0
+      ],
+      "delay_kind": "adjustable up to 12 s",
+      "note": "adjustable delay",
+      "cases": [
+        {
+          "site": "El Paso (qualification)",
+          "target_ft": 800.0,
+          "ballast_g": 48.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.34,
+          "apogee_ft": 759.74,
+          "duration_s": 34.39,
+          "stability_cal": 0.97,
+          "min_stability_cal": 0.84,
+          "rail_exit_fps": 44.43,
+          "deploy_fps": 56.61,
+          "liftoff_g": 548.19,
+          "max_accel_g": 7.93,
+          "thrust_to_weight": 5.8,
+          "score": 50.7,
+          "problems": [
+            "falls 40 ft short with the 48.8 g ballast needed for stability",
+            "stability 0.97 cal off the rail (< 1.0)",
+            "leaves the rail at 44 ft/s (< 45)",
+            "chute opens at 57 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 775.0,
+          "ballast_g": 46.9,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.17,
+          "apogee_ft": 731.43,
+          "duration_s": 34.47,
+          "stability_cal": 1.0,
+          "min_stability_cal": 0.82,
+          "rail_exit_fps": 44.59,
+          "deploy_fps": 51.73,
+          "liftoff_g": 546.29,
+          "max_accel_g": 7.96,
+          "thrust_to_weight": 5.8,
+          "score": 53.7,
+          "problems": [
+            "falls 44 ft short with the 46.9 g ballast needed for stability",
+            "leaves the rail at 45 ft/s (< 45)",
+            "chute opens at 52 ft/s with the 5 s delay"
+          ]
+        },
+        {
+          "site": "ARC Finals (Virginia)",
+          "target_ft": 825.0,
+          "ballast_g": 50.8,
+          "delay_s": 5.0,
+          "optimum_delay_s": 5.16,
+          "apogee_ft": 726.43,
+          "duration_s": 33.93,
+          "stability_cal": 1.0,
+          "min_stability_cal": 0.86,
+          "rail_exit_fps": 44.55,
+          "deploy_fps": 49.83,
+          "liftoff_g": 550.19,
+          "max_accel_g": 7.89,
+          "thrust_to_weight": 5.8,
+          "score": 110.9,
+          "problems": [
+            "falls 99 ft short with the 50.8 g ballast needed for stability",
+            "leaves the rail at 45 ft/s (< 45)",
+            "chute opens at 50 ft/s with the 5 s delay"
+          ]
+        }
+      ],
+      "monte_carlo_el_paso": {},
+      "sold_as": [
+        "Cesaroni"
+      ],
+      "feasible": false,
+      "risk_flags": [
+        "cannot reach a target",
+        "no delay near the optimum",
+        "reloadable (adult assembly, more failure points)",
+        "slow off the rail",
+        "unstable"
+      ],
+      "risk": 4,
+      "expected_score": 9000000000.0,
+      "rank_key": [
+        1,
+        4,
+        9000000000.0
+      ]
+    }
+  ]
+}

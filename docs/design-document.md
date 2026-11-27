@@ -534,6 +534,7 @@ Open questions for the team:
 - [ ] When the rocket changes, which changes need a new calibration and which can reuse the old one?
 - [x] What is the launch site's elevation? El Paso (3,740 ft), confirmed.
 - [x] Does the logged weight include the motor? Yes.
+- [ ] Motor for 2027: the motor study (`sim/motors.py`) recommends the Cesaroni F59WT-12A (reloadable, adult purchase) in a 29 mm mount. Does the team accept a reloadable, and is it available?
 - [ ] Which parachute flew each session? The team flew an 18 in or a 24 in X-form chute (measured tip to tip), not recorded per flight.
 - [ ] Add elevation, motor, delay and parachutes as columns in the flight log from now on.
 - [ ] The parts list names a BT-5 (13 mm) motor mount, but the design flies a 24 mm F39T in a 24 mm tube. Which is right?

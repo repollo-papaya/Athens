@@ -226,7 +226,7 @@ def analyse(row: dict) -> dict:
             if abs(case["deploy_fps"]) > MAX_DEPLOY_SPEED_FPS:
                 case["problems"].append(f"chute opens at {abs(case['deploy_fps']):.0f} ft/s with the {delay:g} s delay")
             if case["liftoff_g"] > MAX_LIFTOFF_G:
-                case["problems"].append(f"liftoff {case['liftoff_g']:.0f} g (> {MAX_LIFTOFF_G:g} g assumed limit)")
+                case["problems"].append(f"liftoff {case['liftoff_g']:.0f} g (> {MAX_LIFTOFF_G:g} g ARC limit)")
             out["cases"].append(case)
 
     # Robustness at El Paso, each target, ballast and delay as trimmed for the nominal day.
@@ -276,7 +276,8 @@ def rank(results: list[dict]) -> list[dict]:
             continue
         problems = [p for c in r["cases"] for p in c["problems"]]
         categories = {category(p) for p in problems}
-        reach = {"cannot reach a target", "needs more ballast than allowed"} & categories
+        # Rule violations and unreachable targets rule a motor out; the rest are risks.
+        reach = {"cannot reach a target", "needs more ballast than allowed", "over the mass limit"} & categories
         r["feasible"] = not reach and bool(r["monte_carlo_el_paso"])
         if r["reloadable"]:
             categories.add("reloadable (adult assembly, more failure points)")

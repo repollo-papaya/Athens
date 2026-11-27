@@ -10,6 +10,7 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `openrocket.py` | Starts OpenRocket with its parts catalogue connected, and sets **every** simulation option from our inputs |
 | `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
 | `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
+| `motors.py` | Studies every ARC 2027 approved 29 mm motor in the design (`data/arc2027_motors.csv`); results in `data/motor_study_2027.json` |
 
 The team's design is `rockets/ederance.ork`.
 
@@ -147,6 +148,46 @@ delay flown, whether the logged weight includes the motor, and which parachutes 
 Duration is still 3 s over the window as built, and it costs 4 points per second.
 The optimizer (next step) searches ballast, parachute and delay for the lowest
 expected score.
+
+## Motor for 2027 (29 mm mount)
+
+The team's F39T is withdrawn for 2027 (its 24/40 reloadable casing is out of
+production). `motors.py` puts every approved 29 mm motor (24 distinct) in the design
+with a 29 mm mount, thrust scaled to NAR's tested impulse, and for each launch case
+trims nose ballast to the target, never below the ballast needed for 1.0 cal
+stability, and picks the available delay closest to the optimum:
+
+- **El Paso, 3,740 ft:** qualification, 800 ft
+- **ARC Finals, Virginia, about 500 ft (assumed):** both ends of the 775–825 ft range
+
+Rule limits (650 g, 80 N-s) rule a motor out. Risks counted: unstable, under 45 ft/s
+off a 6 ft rail, thrust-to-weight under 5, chute opening above 40 ft/s, and reloadable.
+Then 30 randomised qualification flights per motor (wind 0–15 mph, 50–95 °F,
+humidity, ±3% motor impulse, ±5 g build mass) give the expected score.
+
+| Motor | Impulse | Verdict | Why |
+|---|---|---|---|
+| **Cesaroni F59WT-12A** | 57.0 N-s | **Recommended** | Passes every check at all three cases. Lowest expected score (29.9) and the smallest apogee spread (±28 ft). Leaves the rail at 63 ft/s; thrust-to-weight 10; 1.06–1.59 cal. Adjustable delay set to 5 s opens the chute near apogee (22–28 ft/s). Liftoff 527–583 g, leaving 67 g or more under the limit for heavy eggs. Only risk: reloadable. |
+| AeroTech F26FJ-6 | 62.2 N-s | Legal, not advised | Leaves the rail at 42 ft/s with thrust-to-weight 4.0, so it weathercocks; widest spread (±46 ft) |
+| AeroTech F67W-6 | 61.1 N-s | Out (650 g limit) | Needs 180 g ballast at El Paso: 652 g. Otherwise excellent: single-use, 6 s delay matches the optimum |
+| AeroTech F52C | 66.2 N-s | Out (650 g limit) | 659–710 g with the ballast it needs |
+| AeroTech F42T | 52.9 N-s | Out, narrowly | Best single-use for mass, but 3 ft short of 825 ft at Finals while stable, and neither delay fits (4 s opens the chute climbing at 39–62 ft/s; 8 s is far too late) |
+| F50T, F25W, F67C, F40W, F52T | 78–80 N-s | Out | Too much impulse: still 100–214 ft high with 250 g ballast |
+| All E motors; F15, F20W, F27R, F29, F31CL, F32WH, F36SS, F36BS, F37W, F62T | 33–55 N-s | Out | Cannot reach a target while stable, and most leave the rail slowly |
+
+The recommended set-up, from the study:
+
+| | El Paso, 800 ft | Finals, 775 ft | Finals, 825 ft |
+|---|---|---|---|
+| Nose ballast | 92 g | 86 g | 36 g |
+| Liftoff mass | 583 g | 577 g | 527 g |
+| Stability off the rail | 1.59 cal | 1.49 cal | 1.06 cal |
+| Duration (calibrated chute) | 42.2 s | 43.0 s | 47.2 s |
+| Peak acceleration | 11.4 g | 11.5 g | 12.7 g |
+
+Peak acceleration is about what the eggs already survived on the F39T (12.5 g).
+Duration is still 2–7 s over the window; that is the parachute's job (next step).
+Ballast must be re-trimmed whenever the eggs, the weather or the site change.
 
 ## The parts list
 

@@ -309,16 +309,24 @@ def thrust_scale_listener(scale: float):
 
 
 def find_motor(designation: str, manufacturer_hint: str, nar_impulse_ns: float, diameter_mm: float):
-    """The database motor matching an approved-list entry, closest to NAR's tested impulse."""
+    """The database motor matching an approved-list entry, closest to NAR's tested impulse.
+
+    Matches on the class-and-thrust core ("F31" in "F31CL" and Cesaroni's "56F31-12A"),
+    the manufacturer and the diameter, then picks the variant whose impulse is closest
+    to NAR's tested value.
+    """
     import re
     db = jpype.JClass("info.openrocket.core.startup.Application").getMotorSetDatabase()
-    want = designation.upper().replace("/", "")
+    want_core = re.match(r"[A-Z]+\d+", designation.upper().replace("/", "")).group()
+    maker = {"aerotech": "aerotech", "cesaroni": "cesaroni", "estes": "estes", "qjet/at": "aerotech"}.get(
+        manufacturer_hint.lower(), manufacturer_hint.lower())
     best = None
     for ms in db.getMotorSets():
         des = str(ms.getDesignation()).upper().replace("/", "")
-        core = re.sub(r"^\d+", "", des).split("-")[0]           # Cesaroni "55F29-12A" -> "F29"
-        core = re.sub(r"L$", "", core) if core.endswith("L") and core[:-1] == want else core  # "F20WL" -> "F20W"
-        if core != want and des != want:
+        core = re.match(r"[A-Z]+\d+", re.sub(r"^\d+", "", des))
+        if not core or core.group() != want_core:
+            continue
+        if maker not in str(ms.getManufacturer().getDisplayName()).lower().replace(" ", ""):
             continue
         for m in ms.getMotors():
             if abs(float(m.getDiameter()) * 1000 - diameter_mm) > 1:
