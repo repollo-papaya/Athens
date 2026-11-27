@@ -501,7 +501,10 @@ Done so far: home page on GitHub Pages; Firestore project `athens-2509f` created
 read/write connection test passing and security rules verified; the app's first page
 (`app/`) saves launch conditions to `launch_conditions`; `sim/simulate.py` runs one
 OpenRocket 24.12 simulation from those conditions and prints apogee, duration and score
-as JSON (tested on OpenRocket's bundled ARC example rocket).
+as JSON for the team rocket (`rockets/ederance.ork`), setting every simulation option from
+inputs rather than from the simulations saved in the file, and matching OpenRocket desktop
+within 1 ft; `sim/components.py` looks up the parts list (`data/components.csv`) in
+OpenRocket's parts catalogue and checks it against the design.
 
 Open questions for the team:
 
@@ -514,3 +517,4 @@ Open questions for the team:
 - [ ] Which variants can really be changed at the field (ballast positions, parachutes on hand, delay settings)?
 - [ ] What uncertainty should each measured value carry (mass, centre of gravity, motor impulse)?
 - [ ] When the rocket changes, which changes need a new calibration and which can reuse the old one?
+- [ ] The parts list names a BT-5 (13 mm) motor mount, but the design flies a 24 mm F39T in a 24 mm tube. Which is right?

@@ -248,7 +248,7 @@
   <section class="doc" aria-label="Design document">
     <div class="doc-meta">
       <div class="doc-title">Read the design document</div>
-      <div class="doc-sub">PDF &middot; 13 pages &middot; 151 KB &middot; <a href="https://github.com/repollo-papaya/Athens/blob/main/docs/design-document.md">Markdown source</a></div>
+      <div class="doc-sub">PDF &middot; 13 pages &middot; 153 KB &middot; <a href="https://github.com/repollo-papaya/Athens/blob/main/docs/design-document.md">Markdown source</a></div>
     </div>
     <a class="btn" href="ARC%20Rocket%20Design%20Optimizer%20Design%20Document.pdf" target="_blank" rel="noopener">Open PDF &rarr;</a>
   </section>
@@ -267,8 +267,8 @@
       <li><span class="t">Project home page<span class="d">This page, served from the repository root.</span></span><span class="pill done">Done</span></li>
       <li><span class="t"><a href="firebase-test.html">Firestore connection test</a><span class="d">Project athens-2509f. Anonymous sign-in, then write, read and delete one temporary document. Security rules verified.</span></span><span class="pill done">Done</span></li>
       <li><span class="t"><a href="app/">Launch conditions page</a><span class="d">First page of the app. Saves elevation, wind speed, humidity and air temperature to Firestore and reads them back. Rules verified.</span></span><span class="pill done">Done</span></li>
-      <li><span class="t">Validate the simulator<span class="d">Reproduce one or two real flights in OpenRocket within the team&rsquo;s tolerance.</span></span><span class="pill">Not started</span></li>
-      <li><span class="t">Single-simulation script<span class="d"><code>sim/simulate.py</code>: launch conditions in, OpenRocket flight and ARC score out as JSON. Tested on OpenRocket&rsquo;s example ARC rocket; waiting on the team&rsquo;s <code>.ork</code> file.</span></span><span class="pill done">Done</span></li>
+      <li><span class="t">Validate the simulator<span class="d">Headless setup matches OpenRocket desktop within 1 ft on the team rocket. Still needs one or two real flights with altimeter data.</span></span><span class="pill open">In progress</span></li>
+      <li><span class="t">Single-simulation script<span class="d"><code>sim/simulate.py</code> flies <code>rockets/ederance.ork</code> under the app&rsquo;s launch conditions, with every simulation setting set from inputs. Today: 784&nbsp;ft, 56&nbsp;s, score 80. <code>sim/components.py</code> checks the parts list against OpenRocket&rsquo;s catalogue.</span></span><span class="pill done">Done</span></li>
       <li><span class="t">Optimizer script<span class="d">Sweep, Monte Carlo robustness check and ranking.</span></span><span class="pill">Not started</span></li>
       <li><span class="t">Worker and Firestore<span class="d">Polling worker, VM setup and security rules.</span></span><span class="pill">Not started</span></li>
       <li><span class="t">Web app<span class="d">Sign-in, conditions form, live job status and results.</span></span><span class="pill">Not started</span></li>

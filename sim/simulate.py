@@ -1,31 +1,31 @@
-"""Run one OpenRocket simulation for a rocket under given launch conditions.
+"""Run one OpenRocket flight for a rocket under given launch conditions.
 
-This is step 2 of the build plan: launch conditions in, flight result out.
-It drives OpenRocket 24.12 headless through the `orlab` library.
+Launch conditions in, flight result out, as JSON. Every simulation setting is set
+here from the inputs below (see openrocket.py); nothing is taken from the
+simulations saved in the .ork file.
 
 Examples
 --------
-    # OpenRocket's bundled "ARC payload rocket" example, with conditions on the command line
-    python sim/simulate.py --example --elevation-ft 1200 --wind-mph 8 --humidity-pct 45 --temperature-f 62
+    python sim/simulate.py --ork rockets/ederance.ork --elevation-ft 1200 --wind-mph 8 --humidity-pct 45 --temperature-f 62
+    python sim/simulate.py --ork rockets/ederance.ork --conditions conditions.json
+    python sim/simulate.py --example --elevation-ft 0 --wind-mph 5 --humidity-pct 50 --temperature-f 59
 
-    # Your own rocket, with conditions from a JSON file shaped like a launch_conditions record
-    python sim/simulate.py --ork rocket.ork --conditions conditions.json
-
-Units in and out are the app's units (ft, mph, %, °F, s); conversion to SI for
-OpenRocket happens here and nowhere else.
+Units in and out are the app's (ft, mph, %, °F, s).
 """
 from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import sys
 import tempfile
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+SCHEMA_VERSION = 2
 
 # Same ranges as the app form and firestore.rules.
 RANGES = {
@@ -35,42 +35,12 @@ RANGES = {
     "temperature_f": (-40, 130),
 }
 
-# 2027 ARC values from the design doc. Confirm against the official rules
-# (open question); they move to rules/2027 in Firestore later.
+# 2027 ARC values from the design doc; confirm against the official rules.
 DEFAULT_TARGET_APOGEE_FT = 800.0
 DURATION_WINDOW_S = (37.0, 40.0)
 
 EXAMPLE_ORK = "datafiles/examples/ARC payload rocket.ork"
-
 FT_PER_M = 1 / 0.3048
-MPH_TO_MS = 0.44704
-
-
-# ---------------------------------------------------------------------------
-# Atmosphere: the app's four inputs -> what OpenRocket takes
-# ---------------------------------------------------------------------------
-
-def f_to_kelvin(temp_f: float) -> float:
-    return (temp_f - 32.0) * 5.0 / 9.0 + 273.15
-
-
-def isa_pressure_pa(elevation_m: float) -> float:
-    """Standard-atmosphere station pressure at an elevation (troposphere)."""
-    return 101325.0 * (1.0 - 2.25577e-5 * elevation_m) ** 5.25588
-
-
-def virtual_temperature_k(temp_k: float, pressure_pa: float, humidity_pct: float) -> float:
-    """Temperature dry air would need to have the same density as this humid air.
-
-    OpenRocket's atmosphere is dry air, with no humidity input. Water vapour is
-    lighter than air, so humid air is slightly less dense. Passing the virtual
-    temperature gives OpenRocket the correct air density. The effect is small
-    (well under 1% of density on a mild day) but free to include.
-    """
-    temp_c = temp_k - 273.15
-    sat_vapour_pa = 610.94 * math.exp(17.625 * temp_c / (temp_c + 243.04))  # Magnus formula
-    vapour_pa = humidity_pct / 100.0 * sat_vapour_pa
-    return temp_k / (1.0 - (vapour_pa / pressure_pa) * (1.0 - 0.622))
 
 
 def arc_score(apogee_ft: float, duration_s: float, target_apogee_ft: float) -> dict:
@@ -86,15 +56,11 @@ def arc_score(apogee_ft: float, duration_s: float, target_apogee_ft: float) -> d
     }
 
 
-# ---------------------------------------------------------------------------
-# Inputs
-# ---------------------------------------------------------------------------
-
 def load_weather(args: argparse.Namespace) -> dict:
     weather: dict = {}
     if args.conditions:
         doc = json.loads(Path(args.conditions).read_text())
-        weather.update(doc.get("weather", doc))  # a launch_conditions record, or the weather object alone
+        weather.update(doc.get("weather", doc))  # a launch_conditions record, or its weather object
     for key in RANGES:
         value = getattr(args, key)
         if value is not None:
@@ -110,7 +76,6 @@ def load_weather(args: argparse.Namespace) -> dict:
 
 
 def example_ork_path(jar_path: Path) -> Path:
-    """Extract OpenRocket's bundled ARC example rocket from the jar."""
     out = Path(tempfile.gettempdir()) / "orlab-examples" / Path(EXAMPLE_ORK).name
     if not out.exists():
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -119,119 +84,96 @@ def example_ork_path(jar_path: Path) -> Path:
     return out
 
 
-# ---------------------------------------------------------------------------
-# Simulation
-# ---------------------------------------------------------------------------
+def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, branch, jar) -> dict:
+    import orlab
+    from openrocket import configure, describe_rocket, open_openrocket
 
-def simulate(ork: Path, weather: dict, *, motor: str | None, manufacturer: str | None, delay_s: float | None,
-             target_apogee_ft: float, seed: int, branch: int, jar: str | None) -> dict:
-    import orlab  # imported here so --help works without Java
-
-    elevation_m = weather["elevation_ft"] * 0.3048
-    pressure_pa = isa_pressure_pa(elevation_m)
-    temp_k = f_to_kelvin(weather["temperature_f"])
-    effective_temp_k = virtual_temperature_k(temp_k, pressure_pa, weather["humidity_pct"])
-
-    with orlab.OpenRocketInstance(jar_path=jar, log_level="ERROR") as instance:
-        orl = orlab.Helper(instance)
+    with open_openrocket(jar) as orl:
         doc = orl.load_doc(str(ork))
-        sim = doc.getSimulation(0)
-        opts = sim.getOptions()
-
-        opts.setISAAtmosphere(False)            # use our temperature and pressure, not the standard day
-        opts.setLaunchAltitude(elevation_m)
-        opts.setLaunchPressure(pressure_pa)
-        opts.setLaunchTemperature(effective_temp_k)
-        opts.setWindSpeedAverage(weather["wind_mph"] * MPH_TO_MS)
-        # Wind turbulence is random. A fixed seed repeats exactly within one process; across processes
-        # OpenRocket 24.12's wind model adds its own randomness, so results differ by a fraction of a foot.
-        opts.setRandomSeed(seed)
-
-        if motor:
-            orl.set_motor(sim, motor, manufacturer=manufacturer, delay=delay_s)
-        elif delay_s is not None:
-            sys.exit("--delay-s needs --motor")
-
+        sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s)
         orl.run_simulation(sim, randomize_seed=False)
-        summary = orl.get_summary(sim, branch_number=branch)
+        s = orl.get_summary(sim, branch_number=branch)
+        T = orlab.FlightDataType
+        series = orl.get_timeseries(sim, [T.TYPE_MASS, T.TYPE_CG_LOCATION], branch_number=branch)
+        rocket = describe_rocket(orl, doc, sim)
 
-        components = [
-            {"type": str(c.getClass().getSimpleName()), "name": str(c.getName()),
-             "mass_g": round(float(c.getMass()) * 1000, 1)}
-            for c in orl.get_all_components(doc.getRocket())
-            if str(c.getClass().getSimpleName()) not in ("Rocket", "AxialStage")
-        ]
-        flown_motor = orl.get_motor(sim)
-        wind_turbulence = float(opts.getWindTurbulenceIntensity())
-        rod_length_m = float(opts.getLaunchRodLength())
-
-    apogee_ft = summary.apogee * FT_PER_M
-    duration_s = summary.flight_time
+    liftoff = {
+        "mass_g": round(float(series[T.TYPE_MASS][0]) * 1000, 1),
+        "cg_from_nose_in": round(float(series[T.TYPE_CG_LOCATION][0]) / 0.0254, 2),
+    }
+    apogee_ft = s.apogee * FT_PER_M
     return {
         "schema_version": SCHEMA_VERSION,
         "sim_version": "openrocket-24.12",
-        "rocket": {"ork_file": ork.name, "motor": flown_motor, "components": components},
-        "conditions": {
-            "weather": weather,
-            "derived": {
-                "pressure_pa": round(pressure_pa, 1),
-                "temperature_k": round(temp_k, 2),
-                "density_equivalent_temperature_k": round(effective_temp_k, 2),
-                "wind_ms": round(weather["wind_mph"] * MPH_TO_MS, 2),
-                "wind_turbulence_intensity": wind_turbulence,
-                "launch_rod_length_m": rod_length_m,
-            },
-            "target_apogee_ft": target_apogee_ft,
-        },
-        "seed": seed,
+        "rocket": {"ork_file": ork.name, **rocket, "liftoff": liftoff},
+        "launch": {**asdict(launch), "derived": {k: round(v, 2) for k, v in launch.derived().items()}},
         "predicted": {
-            "branch": summary.branch_name,
+            "branch": str(s.branch_name),
             "apogee_ft": round(apogee_ft, 1),
-            "duration_s": round(duration_s, 2),
-            "time_to_apogee_s": round(summary.time_to_apogee, 2),
-            "max_velocity_fps": round(summary.max_velocity * FT_PER_M, 1),
-            "max_mach": round(summary.max_mach, 3),
-            "velocity_off_rod_fps": round(summary.velocity_off_rod * FT_PER_M, 1),
-            "stability_off_rod_cal": round(summary.stability_off_rod_cal, 2),
-            "min_stability_cal": round(summary.min_stability_cal, 2),
-            "descent_rate_fps": round(summary.descent_rate * FT_PER_M, 1),
-            "ground_hit_velocity_fps": round(summary.ground_hit_velocity * FT_PER_M, 1),
-            "landing_distance_ft": round(summary.landing_distance * FT_PER_M, 1),
-            "optimum_delay_s": round(summary.optimum_delay, 2) if summary.optimum_delay == summary.optimum_delay else None,
+            "duration_s": round(s.flight_time, 2),
+            "time_to_apogee_s": round(s.time_to_apogee, 2),
+            "optimum_delay_s": round(s.optimum_delay, 2) if s.optimum_delay == s.optimum_delay else None,
+            "max_velocity_fps": round(s.max_velocity * FT_PER_M, 1),
+            "max_mach": round(s.max_mach, 3),
+            "max_acceleration_g": round(s.max_acceleration / 9.80665, 1),
+            "velocity_off_rail_fps": round(s.velocity_off_rod * FT_PER_M, 1),
+            "stability_off_rail_cal": round(s.stability_off_rod_cal, 2),
+            "min_stability_cal": round(s.min_stability_cal, 2),
+            "velocity_at_deployment_fps": round(s.velocity_at_deployment * FT_PER_M, 1),
+            "descent_rate_fps": round(s.descent_rate * FT_PER_M, 1),
+            "ground_hit_velocity_fps": round(s.ground_hit_velocity * FT_PER_M, 1),
+            "landing_distance_ft": round(s.landing_distance * FT_PER_M, 1),
         },
-        "score": arc_score(apogee_ft, duration_s, target_apogee_ft),
-        "warnings": [str(w) for w in summary.warnings],
+        "score": arc_score(apogee_ft, s.flight_time, target_apogee_ft),
+        "target_apogee_ft": target_apogee_ft,
+        "warnings": [str(w) for w in s.warnings],
     }
 
 
 def main(argv: list[str] | None = None) -> None:
+    from openrocket import Launch
+
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--ork", type=Path, help="OpenRocket design file (.ork)")
     src.add_argument("--example", action="store_true", help="use OpenRocket's bundled 'ARC payload rocket' example")
-    p.add_argument("--conditions", help="JSON file: a launch_conditions record or its weather object")
-    p.add_argument("--elevation-ft", dest="elevation_ft", type=float)
-    p.add_argument("--wind-mph", dest="wind_mph", type=float)
-    p.add_argument("--humidity-pct", dest="humidity_pct", type=float)
-    p.add_argument("--temperature-f", dest="temperature_f", type=float)
-    p.add_argument("--motor", help="motor designation to fly instead of the file's, e.g. F50T")
-    p.add_argument("--manufacturer", help="motor manufacturer, when the designation is made by several (e.g. Estes)")
-    p.add_argument("--delay-s", type=float, help="ejection delay to use with --motor")
-    p.add_argument("--target-apogee-ft", type=float, default=DEFAULT_TARGET_APOGEE_FT)
-    p.add_argument("--seed", type=int, default=42,
-                   help="random seed for wind turbulence (default 42); see the note in simulate() on repeatability")
-    p.add_argument("--branch", type=int, default=0,
-                   help="which section's flight to report when the rocket separates (default 0, usually the payload)")
-    p.add_argument("--jar", help="path to an OpenRocket jar (default: the one `python -m orlab fetch` downloaded)")
-    p.add_argument("--out", type=Path, help="write the result JSON here as well as printing it")
+    g = p.add_argument_group("launch conditions (the app's four inputs)")
+    g.add_argument("--conditions", help="JSON file: a launch_conditions record or its weather object")
+    g.add_argument("--elevation-ft", dest="elevation_ft", type=float)
+    g.add_argument("--wind-mph", dest="wind_mph", type=float)
+    g.add_argument("--humidity-pct", dest="humidity_pct", type=float)
+    g.add_argument("--temperature-f", dest="temperature_f", type=float)
+    d = Launch(0, 0, 0, 0)
+    g = p.add_argument_group("launch site and rail")
+    g.add_argument("--turbulence-pct", type=float, default=d.turbulence_pct, help=f"wind gustiness (default {d.turbulence_pct:g})")
+    g.add_argument("--wind-from-deg", type=float, default=d.wind_from_deg, help="compass direction the wind blows from")
+    g.add_argument("--rail-length-ft", type=float, default=d.rail_length_ft, help=f"default {d.rail_length_ft:g}")
+    g.add_argument("--rail-angle-deg", type=float, default=d.rail_angle_deg, help="tilt from vertical (default 0)")
+    g.add_argument("--launch-into-wind", action="store_true", help="tilt the rail into the wind")
+    g.add_argument("--latitude-deg", type=float, default=d.latitude_deg, help=f"default {d.latitude_deg} (ARC Finals)")
+    g.add_argument("--longitude-deg", type=float, default=d.longitude_deg)
+    g = p.add_argument_group("motor")
+    g.add_argument("--motor", help="motor designation to fly instead of the design's, e.g. F39T")
+    g.add_argument("--manufacturer", help="motor manufacturer, when several make that designation")
+    g.add_argument("--delay-s", type=float, help="ejection delay to use with --motor")
+    g = p.add_argument_group("run")
+    g.add_argument("--target-apogee-ft", type=float, default=DEFAULT_TARGET_APOGEE_FT)
+    g.add_argument("--seed", type=int, default=d.seed, help="random seed for wind turbulence")
+    g.add_argument("--time-step-s", type=float, default=d.time_step_s, help=f"integrator step (default {d.time_step_s})")
+    g.add_argument("--branch", type=int, default=0, help="which section to report if the rocket separates (default 0)")
+    g.add_argument("--jar", help="OpenRocket jar (default: the one `python -m orlab fetch` downloaded)")
+    g.add_argument("--out", type=Path, help="also write the result JSON here")
     args = p.parse_args(argv)
 
     weather = load_weather(args)
-    if not args.example and not args.ork.exists():
+    launch = Launch(**weather, turbulence_pct=args.turbulence_pct, wind_from_deg=args.wind_from_deg,
+                    rail_length_ft=args.rail_length_ft, rail_angle_deg=args.rail_angle_deg,
+                    launch_into_wind=args.launch_into_wind, latitude_deg=args.latitude_deg,
+                    longitude_deg=args.longitude_deg, time_step_s=args.time_step_s, seed=args.seed)
+    if args.ork and not args.ork.exists():
         sys.exit(f"No such file: {args.ork}")
 
-    # OpenRocket and orlab log to stdout. Point stdout at stderr while they run
-    # so this script's stdout is only the result JSON.
+    # OpenRocket logs to stdout; point stdout at stderr while it runs so stdout is only JSON.
     sys.stdout.flush()
     real_stdout = os.dup(1)
     os.dup2(2, 1)
@@ -241,13 +183,13 @@ def main(argv: list[str] | None = None) -> None:
             ork = example_ork_path(Path(args.jar) if args.jar else Path(orlab.fetch_jar()))
         else:
             ork = args.ork
-        result = simulate(ork, weather, motor=args.motor, manufacturer=args.manufacturer, delay_s=args.delay_s,
-                          target_apogee_ft=args.target_apogee_ft, seed=args.seed,
-                          branch=args.branch, jar=args.jar)
+        result = run(ork, launch, motor=args.motor, manufacturer=args.manufacturer, delay_s=args.delay_s,
+                     target_apogee_ft=args.target_apogee_ft, branch=args.branch, jar=args.jar)
     finally:
         sys.stdout.flush()
         os.dup2(real_stdout, 1)
         os.close(real_stdout)
+
     text = json.dumps(result, indent=2, ensure_ascii=False)
     if args.out:
         args.out.write_text(text + "\n")
