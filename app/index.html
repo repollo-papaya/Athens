@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Launch Conditions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: app bar, then one column with the conditions form (four readouts with units), a saved/verified confirmation, and recent entries. */
+  :root {
+    --bg: #f5f7f9; --surface: #ffffff; --fg: #16202a; --muted: #5a6875; --line: #d9e0e6;
+    --field: #f9fafb;
+    --accent: #c2410c; --accent-fg: #ffffff;
+    --ok-bg: #e7f5ec; --ok-line: #b6e0c4; --ok-fg: #1d6b3a;
+    --bad-bg: #fbeaea; --bad-line: #efc0c0; --bad-fg: #9b2222;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642;
+      --field: #121a22;
+      --accent: #fb7a3c; --accent-fg: #1a0d05;
+      --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+      --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642;
+    --field: #121a22;
+    --accent: #fb7a3c; --accent-fg: #1a0d05;
+    --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+    --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 var(--font-body); }
+  .wrap {
+    max-width: 40rem; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .appbar { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .appbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.75rem; }
+  .brand { font: 700 1rem/1 var(--font-display); color: var(--fg); text-decoration: none; }
+  .who { font: 400 0.75rem/1.3 var(--font-mono); color: var(--muted); text-align: right; min-width: 0; overflow-wrap: anywhere; }
+
+  main.wrap { padding-block: 2rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+  main.wrap > * { min-width: 0; }
+  .eyebrow { font: 500 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.6rem; }
+  h1 { font: 700 clamp(1.75rem, 5vw, 2.25rem)/1.15 var(--font-display); margin: 0 0 0.5rem; text-wrap: balance; }
+  h2 { font: 700 1.0625rem/1.3 var(--font-display); margin: 0 0 0.75rem; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--muted); }
+
+  form { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; display: grid; gap: 1.25rem; }
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  @media (max-width: 520px) { .fields { grid-template-columns: 1fr; } }
+  .field { display: grid; gap: 0.35rem; min-width: 0; }
+  .field label { font: 500 0.75rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .input {
+    display: flex; align-items: baseline;
+    background: var(--field); border: 1px solid var(--line); border-radius: 4px;
+    padding: 0.55rem 0.75rem;
+  }
+  .input:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .input input {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: var(--fg); outline: none;
+    font: 500 1.5rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; padding: 0;
+  }
+  .input .unit { font: 400 0.9375rem/1 var(--font-mono); color: var(--muted); padding-left: 0.5rem; }
+  .hint { font-size: 0.8125rem; color: var(--muted); }
+  .field.invalid .input { border-color: var(--bad-fg); }
+  .field.invalid .hint { color: var(--bad-fg); }
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  button {
+    padding: 0.75rem 1.25rem; border: 0; border-radius: 4px;
+    background: var(--accent); color: var(--accent-fg);
+    font: 500 1rem/1 var(--font-body); cursor: pointer;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .status { font-size: 0.875rem; color: var(--muted); }
+  .status.err { color: var(--bad-fg); }
+
+  .saved { border: 1px solid var(--ok-line); background: var(--ok-bg); color: var(--ok-fg); border-radius: 6px; padding: 1rem 1.25rem; display: grid; gap: 0.35rem; }
+  .saved strong { font-weight: 600; }
+  .saved .meta { font: 400 0.8125rem/1.4 var(--font-mono); overflow-wrap: anywhere; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+  th, td { text-align: right; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  th { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  th:first-child, td:first-child { text-align: left; }
+  td { font-family: var(--font-mono); }
+  tr:last-child td { border-bottom: 0; }
+  tr.new td { background: var(--ok-bg); }
+  .empty { padding: 1rem; color: var(--muted); font: 400 0.875rem/1.5 var(--font-body); white-space: normal; text-align: left; }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap">
+    <a class="brand" href="../">ARC Rocket Design Optimizer</a>
+    <span class="who" id="who">Connecting&hellip;</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <p class="eyebrow">Step 1 &middot; Launch conditions</p>
+    <h1>What are the conditions at the field?</h1>
+    <p class="lede">Enter today&rsquo;s weather at the launch site. Each save is stored in the database and checked by reading it back.</p>
+  </section>
+
+  <form id="form" novalidate>
+    <div class="fields">
+      <div class="field" data-min="-1500" data-max="15000">
+        <label for="elevation_ft">Field elevation</label>
+        <div class="input"><input id="elevation_ft" name="elevation_ft" type="number" inputmode="decimal" step="any" placeholder="1200" required><span class="unit">ft</span></div>
+        <span class="hint">Above sea level, &minus;1,500 to 15,000 ft</span>
+      </div>
+      <div class="field" data-min="0" data-max="60">
+        <label for="wind_mph">Wind speed</label>
+        <div class="input"><input id="wind_mph" name="wind_mph" type="number" inputmode="decimal" step="any" placeholder="8" required><span class="unit">mph</span></div>
+        <span class="hint">Sustained wind, 0 to 60 mph</span>
+      </div>
+      <div class="field" data-min="0" data-max="100">
+        <label for="humidity_pct">Humidity</label>
+        <div class="input"><input id="humidity_pct" name="humidity_pct" type="number" inputmode="decimal" step="any" placeholder="45" required><span class="unit">%</span></div>
+        <span class="hint">Relative humidity, 0 to 100%</span>
+      </div>
+      <div class="field" data-min="-40" data-max="130">
+        <label for="temperature_f">Air temperature</label>
+        <div class="input"><input id="temperature_f" name="temperature_f" type="number" inputmode="decimal" step="any" placeholder="62" required><span class="unit">&deg;F</span></div>
+        <span class="hint">&minus;40 to 130 &deg;F</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="save" type="submit" disabled>Save conditions</button>
+      <span class="status" id="status" role="status" aria-live="polite"></span>
+    </div>
+  </form>
+
+  <div class="saved" id="saved" hidden></div>
+
+  <section>
+    <h2>Your saved conditions</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Saved</th><th>Elevation</th><th>Wind</th><th>Humidity</th><th>Temp</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" class="empty">Loading&hellip;</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import { firebaseConfig } from "../firebase-config.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, getDocFromServer, getDocsFromServer,
+    query, where, limit, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const FIELDS = ["elevation_ft", "wind_mph", "humidity_pct", "temperature_f"];
+  const form = document.getElementById("form");
+  const saveBtn = document.getElementById("save");
+  const statusEl = document.getElementById("status");
+  const savedEl = document.getElementById("saved");
+  const rowsEl = document.getElementById("rows");
+  const whoEl = document.getElementById("who");
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  let user = null;
+
+  function setStatus(text, isError) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("err", !!isError);
+  }
+
+  function explain(err) {
+    const code = (err && err.code) || "";
+    if (code === "permission-denied")
+      return "The database refused the request. The latest rules from firestore.rules may not be published yet.";
+    if (code === "unavailable")
+      return "Could not reach the database. Check your connection and try again.";
+    if (code.startsWith("auth/"))
+      return "Could not sign in (" + code + "). Check that anonymous sign-in is enabled in Firebase.";
+    return (code ? code + ": " : "") + ((err && err.message) || String(err));
+  }
+
+  // Validation mirrors the ranges in firestore.rules.
+  function readForm() {
+    const values = {};
+    let ok = true;
+    for (const name of FIELDS) {
+      const input = document.getElementById(name);
+      const field = input.closest(".field");
+      const min = Number(field.dataset.min), max = Number(field.dataset.max);
+      const raw = input.value.trim();
+      const n = raw === "" ? NaN : Number(raw);
+      const valid = Number.isFinite(n) && n >= min && n <= max;
+      field.classList.toggle("invalid", !valid);
+      if (!valid) ok = false; else values[name] = n;
+    }
+    return ok ? values : null;
+  }
+
+  for (const name of FIELDS) {
+    document.getElementById(name).addEventListener("input", (e) => {
+      e.target.closest(".field").classList.remove("invalid");
+    });
+  }
+
+  const fmt = (n, unit) => (Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 })) + unit;
+  const when = (ts) => ts && ts.toDate ? ts.toDate().toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
+
+  async function loadRecent(highlightId) {
+    try {
+      const snap = await getDocsFromServer(query(collection(db, "launch_conditions"), where("uid", "==", user.uid), limit(50)));
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.created_at?.toMillis?.() ?? 0) - (a.created_at?.toMillis?.() ?? 0))
+        .slice(0, 10);
+      if (!docs.length) {
+        rowsEl.innerHTML = '<tr><td colspan="5" class="empty">Nothing saved yet. Conditions you save appear here.</td></tr>';
+        return;
+      }
+      rowsEl.replaceChildren(...docs.map(d => {
+        const tr = document.createElement("tr");
+        if (d.id === highlightId) tr.className = "new";
+        const w = d.weather || {};
+        for (const text of [when(d.created_at), fmt(w.elevation_ft, " ft"), fmt(w.wind_mph, " mph"), fmt(w.humidity_pct, "%"), fmt(w.temperature_f, " °F")]) {
+          const td = document.createElement("td"); td.textContent = text; tr.appendChild(td);
+        }
+        return tr;
+      }));
+    } catch (err) {
+      rowsEl.innerHTML = "";
+      const tr = document.createElement("tr"), td = document.createElement("td");
+      td.colSpan = 5; td.className = "empty"; td.textContent = explain(err);
+      tr.appendChild(td); rowsEl.appendChild(tr);
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    savedEl.hidden = true;
+    const weather = readForm();
+    if (!weather) { setStatus("Fix the highlighted values.", true); return; }
+    saveBtn.disabled = true;
+    setStatus("Saving…");
+    try {
+      const ref = await addDoc(collection(db, "launch_conditions"), {
+        schema_version: 1,
+        uid: user.uid,
+        created_at: serverTimestamp(),
+        weather,
+      });
+      setStatus("Checking the database…");
+      const snap = await getDocFromServer(ref);
+      if (!snap.exists()) throw new Error("Saved, but the record could not be read back.");
+      const stored = snap.data().weather;
+      const mismatch = FIELDS.filter(k => stored[k] !== weather[k]);
+      if (mismatch.length) throw new Error("Read back different values for: " + mismatch.join(", "));
+
+      savedEl.innerHTML = "";
+      const head = document.createElement("strong");
+      head.textContent = "Saved and verified in the database.";
+      const vals = document.createElement("div");
+      vals.textContent = `${fmt(stored.elevation_ft, " ft")} elevation · ${fmt(stored.wind_mph, " mph")} wind · ${fmt(stored.humidity_pct, "%")} humidity · ${fmt(stored.temperature_f, " °F")}`;
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `launch_conditions/${ref.id} · server time ${when(snap.data().created_at)}`;
+      savedEl.append(head, vals, meta);
+      savedEl.hidden = false;
+      setStatus("");
+      await loadRecent(ref.id);
+    } catch (err) {
+      console.error(err);
+      setStatus(explain(err), true);
+    } finally {
+      saveBtn.disabled = !user;
+    }
+  });
+
+  onAuthStateChanged(auth, async (u) => {
+    if (!u) return;
+    user = u;
+    whoEl.textContent = "Guest " + u.uid.slice(0, 6);
+    saveBtn.disabled = false;
+    setStatus("");
+    await loadRecent();
+  });
+
+  signInAnonymously(auth).catch((err) => {
+    whoEl.textContent = "Not connected";
+    setStatus(explain(err), true);
+    rowsEl.innerHTML = '<tr><td colspan="5" class="empty">Not connected to the database.</td></tr>';
+  });
+</script>
+</body>
+</html>

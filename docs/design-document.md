@@ -121,7 +121,7 @@ In optimization terms these are the *environment*, the *fixed parameters* and th
 | # | Category | What it holds | Changes | Set by |
 |---|---|---|---|---|
 | 0 | Competition rules | Score formula, target windows, approved motors, minimum stability, size and mass limits | Once a year | Team, from the official rules |
-| 1 | Launch conditions | **Weather** (temperature, wind, gusts, pressure, elevation, launch angle) and **target** (apogee, duration window) | Every run | User, forecast or AI parser; user confirms |
+| 1 | Launch conditions | **Weather** (temperature, wind, gusts, humidity, pressure, elevation, launch angle) and **target** (apogee, duration window) | Every run | User, forecast or AI parser; user confirms |
 | 2 | Fixed rocket components | Dimensions, component masses, centre of gravity, motor mount, `.ork` file | Rarely, as a new version | Team, measured |
 | 3 | Variant options and ranges | Motors to try, ballast mass and position, parachute diameter, deploy delay | Defaults with the rocket; narrowed per run | Team |
 | 4 | Run settings | Time budget, Monte Carlo runs, random seed | Per run, usually defaults | User |
@@ -173,6 +173,7 @@ variants. With the seed recorded, any study can be replayed exactly.
 |---|---|---|
 | `rules/{season}` | 0 | One document per season, e.g. `rules/2027` |
 | `rockets/{rocket_id}/versions/{version}` | 2 and default 3 | Never edited after creation; a change makes a new version |
+| `launch_conditions/{id}` | 1 (weather) | Saved from the app's first page; never edited |
 | `jobs/{job_id}` | 1, 3 narrowing, 4 | Plus references to the rules and rocket version |
 | `results/{job_id}` | Generated | Records the rules, rocket version and calibration used |
 | `flights/{flight_id}` | Generated | Real flight data, rocket version and motor flown |
@@ -246,6 +247,7 @@ Job request (categories 1, 3 and 4), written by the web app:
       "temperature_f": 62,
       "wind_mph": 8,
       "gust_mph": 15,
+      "humidity_pct": 45,
       "elevation_ft": 1200,
       "pressure_inhg": 29.92,
       "launch_angle_deg": 0
@@ -261,6 +263,11 @@ Job request (categories 1, 3 and 4), written by the web app:
   "run": { "max_seconds": 180, "monte_carlo_runs": 100, "seed": 42 }
 }
 ```
+
+The app's first page saves the weather part on its own, to `launch_conditions/{id}`, as
+`{ "schema_version": 1, "uid", "created_at", "weather": { "elevation_ft", "wind_mph",
+"humidity_pct", "temperature_f" } }`. Saved conditions are never edited. A job will later
+reference or copy them.
 
 `variants` is optional and may only narrow the rocket version's `variant_defaults`. A
 range not listed uses the default.
@@ -473,7 +480,8 @@ Each step produces something that works alone, so the next step can be tested ag
 7. Add the AI parser last, once the form and the schemas are stable.
 
 Done so far: home page on GitHub Pages; Firestore project `athens-2509f` created, with a
-read/write connection test passing and security rules verified.
+read/write connection test passing and security rules verified; the app's first page
+(`app/`) saves launch conditions to `launch_conditions`.
 
 Open questions for the team:
 
