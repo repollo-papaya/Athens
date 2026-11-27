@@ -11,8 +11,8 @@ For every approved 29 mm motor (data/arc2027_motors.csv) this:
    the rail, thrust-to-weight, deployment speed at the chosen delay, mass limit,
    reloadable assembly;
 4. runs a Monte Carlo robustness check (wind, temperature, humidity,
-   motor-to-motor impulse, build mass) at El Paso and scores each motor on its
-   expected ARC score.
+   motor-to-motor impulse, build mass) for the 800 ft qualification flight at
+   El Paso and scores each motor on its expected ARC score.
 
     python sim/motors.py                       # all approved 29 mm motors, report
     python sim/motors.py --only F42T F67W      # a few
@@ -43,8 +43,8 @@ ORK = ROOT / "rockets" / "ederance.ork"
 CALIBRATION = ROOT / "data" / "calibration.json"
 FT_PER_M = 1 / 0.3048
 
-# ARC 2027: altitude targets 775 and 825 ft, duration 37-40 s.
-TARGETS_FT = (775.0, 825.0)
+# ARC 2027 parameters: qualification target 800 ft; Finals targets "will not be 800
+# feet but will be between 775 and 825 feet"; duration 37-40 s for both.
 DURATION_WINDOW_S = (37.0, 40.0)
 
 # Limits used to call a flight safe. Assumptions are marked.
@@ -52,7 +52,8 @@ MIN_STABILITY_CAL = 1.0          # common minimum; ARC rules leave stability to 
 MIN_RAIL_EXIT_FPS = 45.0         # common guidance for a stable departure
 MIN_THRUST_TO_WEIGHT = 5.0       # NAR guidance for model rockets
 MAX_DEPLOY_SPEED_FPS = 40.0      # faster deployments risk zippering or tearing the chute (assumed)
-MAX_LIFTOFF_G = 650.0            # ASSUMED from past ARC rules; confirm in the 2027 rules
+MAX_LIFTOFF_G = 650.0            # ARC 2027: no more than 650 g liftoff weight, motor included
+MAX_IMPULSE_NS = 80.0            # ARC 2027: no more than 80 N-s total impulse
 MAX_BALLAST_G = 250.0
 
 
@@ -65,12 +66,15 @@ class Site:
     humidity_pct: float
     latitude_deg: float
     longitude_deg: float
+    targets_ft: tuple
 
 
 SITES = (
-    Site("El Paso", 3740, 70, 5, 25, 31.8, -106.4),
-    # ARC Finals, Great Meadow, The Plains, Virginia. Elevation ASSUMED about 500 ft.
-    Site("ARC Finals (Virginia)", 500, 75, 5, 60, 38.9, -77.8),
+    # Qualification flights at the team's field.
+    Site("El Paso (qualification)", 3740, 70, 5, 25, 31.8, -106.4, (800.0,)),
+    # ARC Finals, Great Meadow, The Plains, Virginia; elevation ASSUMED about 500 ft.
+    # Both ends of the announced 775-825 ft range.
+    Site("ARC Finals (Virginia)", 500, 75, 5, 60, 38.9, -77.8, (775.0, 825.0)),
 )
 
 
@@ -193,7 +197,7 @@ def analyse(row: dict) -> dict:
         return b, _fly(row, None, scale, b, delay, site), None
 
     for site in SITES:
-        for target in TARGETS_FT:
+        for target in site.targets_ft:
             # First pass with a long delay so an early deployment cannot cap the apogee.
             b0, r0, problem = trim(site, target, max(delays))
             opt = r0["optimum_delay_s"]
@@ -228,11 +232,11 @@ def analyse(row: dict) -> dict:
     # Robustness at El Paso, each target, ballast and delay as trimmed for the nominal day.
     rng = random.Random(f"{row['designation']}-{row['manufacturer']}")
     mc = {}
-    for case in (c for c in out["cases"] if c["site"] == "El Paso"):
+    for case in (c for c in out["cases"] if c["site"] == SITES[0].name):
         if any(category(p) in ("cannot reach a target", "needs more ballast than allowed") for p in case["problems"]):
             continue
         runs = []
-        for _ in range(20):
+        for _ in range(30):
             r = _fly(row, None, scale * rng.gauss(1.0, 0.03), max(0.0, case["ballast_g"] + rng.gauss(0, 5)),
                      case["delay_s"], SITES[0], wind=rng.uniform(0, 15), temp=rng.uniform(50, 95), hum=rng.uniform(5, 45))
             runs.append(r)
@@ -311,7 +315,7 @@ def main() -> None:
         r["sold_as"] = aliases[(r.get("designation", ""), str(r.get("nar_impulse_ns", "")))] if "designation" in r else []
     results = rank(results)
 
-    report = {"site_assumptions": [asdict(s) for s in SITES], "targets_ft": TARGETS_FT,
+    report = {"site_assumptions": [asdict(s) for s in SITES],
               "limits": {"min_stability_cal": MIN_STABILITY_CAL, "min_rail_exit_fps": MIN_RAIL_EXIT_FPS,
                          "min_thrust_to_weight": MIN_THRUST_TO_WEIGHT, "max_deploy_fps": MAX_DEPLOY_SPEED_FPS,
                          "max_liftoff_g_assumed": MAX_LIFTOFF_G},

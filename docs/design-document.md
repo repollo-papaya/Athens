@@ -16,11 +16,16 @@ hundreds of simulations, ranks designs by expected competition score, and return
 options with a robustness estimate. It replaces the current manual loop: simulate a few
 options in RocketSim, pick the best, build, test.
 
-Context from the 2027 ARC parameters: qualification flights
-target 800 ft, Finals targets fall between 775 and 825 ft, duration target is 37 to 40 s,
-and the payload is two large eggs (55 to 63 g). In earlier years the score was altitude
-error plus 4 times duration error, lower is better. Confirm the 2027 formula in the
-official rules before hard-coding it.
+Context from the [2027 ARC parameters](ARC2027_Parameters.pdf): qualification flights
+target 800 ft, Finals targets "will not be 800 feet but will be between 775 and 825 feet",
+duration target is 37 to 40 s for both, and the payload is two large eggs (55 to 63 g),
+any orientation. Rocket limits: at least 650 mm long, no more than 650 g at liftoff with
+the motor, single stage, no more than 80 N-s total impulse of
+[ARC-approved motors](Rocket-Motors-Approved-for-ARC-2027.pdf). The airframe needs at
+least two body-tube diameters, one a T-80 (66 mm) tube at least 12 in long and every other
+at least 9 mm different. Recovery uses one or more parachutes with all parts tethered.
+In earlier years the score was altitude error plus 4 times duration error, lower is
+better. Confirm the 2027 formula in the official rules before hard-coding it.
 
 Proposed success measures (the team should set the final numbers):
 
@@ -203,8 +208,15 @@ Competition rules (category 0), written by the team once per season:
     "finals_apogee_ft_range": [775, 825],
     "duration_s_window": [37, 40]
   },
-  "approved_motors": ["<approved motor ids>"],
-  "limits": { "min_stability_cal": 1.0, "max_liftoff_mass_g": "<from rules>" }
+  "approved_motors": "data/arc2027_motors.csv",
+  "limits": {
+    "min_stability_cal": 1.0,
+    "max_liftoff_mass_g": 650,
+    "max_total_impulse_ns": 80,
+    "min_length_mm": 650,
+    "t80_min_length_in": 12,
+    "other_tube_min_diameter_difference_mm": 9
+  }
 }
 ```
 
@@ -512,7 +524,7 @@ parachute drag to 0.70 of the design's, which brings mean duration error to zero
 Open questions for the team:
 
 - [ ] What simulation tolerance counts as "validated" (apogee and duration)?
-- [ ] Which approved motors and rocket constraints apply, per the 2027 rules and approved motor list?
+- [x] Which approved motors and rocket constraints apply? Answered by the 2027 parameters and the approved motor list (in `docs/`). The team's F39T is withdrawn for 2027.
 - [ ] Is the 2027 score formula still altitude error plus 4 times duration error?
 - [ ] Does the parse function run as a Cloud Function or as a worker job?
 - [ ] Who owns the VM, the Firebase project and the API key, and who sets the budget alerts?
@@ -520,7 +532,8 @@ Open questions for the team:
 - [ ] Which variants can really be changed at the field (ballast positions, parachutes on hand, delay settings)?
 - [ ] What uncertainty should each measured value carry (mass, centre of gravity, motor impulse)?
 - [ ] When the rocket changes, which changes need a new calibration and which can reuse the old one?
-- [ ] What is the launch site's elevation? Validation assumes 3,740 ft (the `.ork`'s first saved simulation).
-- [ ] Does the logged weight include the motor, and which motor, delay and parachutes flew each session?
+- [x] What is the launch site's elevation? El Paso (3,740 ft), confirmed.
+- [x] Does the logged weight include the motor? Yes.
+- [ ] Which parachute flew each session? The team flew an 18 in or a 24 in X-form chute (measured tip to tip), not recorded per flight.
 - [ ] Add elevation, motor, delay and parachutes as columns in the flight log from now on.
 - [ ] The parts list names a BT-5 (13 mm) motor mount, but the design flies a 24 mm F39T in a 24 mm tube. Which is right?
