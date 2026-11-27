@@ -18,6 +18,8 @@
     --line: #d9e0e6;
     --accent: #c2410c;
     --accent-fg: #ffffff;
+    --ok-bg: #e7f5ec; --ok-line: #b6e0c4; --ok-fg: #1d6b3a;
+    --warn-bg: #fdf3e2; --warn-line: #f0d3a0; --warn-fg: #8a5a0b;
     --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
     --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -26,12 +28,12 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1;
-      --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; color-scheme: dark;
+      --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8; --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1;
-    --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; color-scheme: dark;
+    --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8; --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879; color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body {
@@ -158,6 +160,63 @@
   ol.toc .t { min-width: 0; }
   ol.toc .d { display: block; color: var(--muted); font-size: 0.875rem; }
 
+  .status-note { color: var(--muted); margin-bottom: 0.75rem; }
+  ul.status {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line);
+  }
+  ul.status li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  ul.status .t { min-width: 0; flex: 1 1 18rem; }
+  ul.status .d { display: block; color: var(--muted); font-size: 0.875rem; }
+  .pill {
+    font: 500 0.7rem/1 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .pill.done { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-fg); }
+  .pill.open { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-fg); }
+
+  .stack {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(7rem, 10rem) 1fr;
+    border-top: 1px solid var(--line);
+  }
+  .stack dt, .stack dd {
+    margin: 0;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+    min-width: 0;
+  }
+  .stack dt {
+    font: 500 0.75rem/1.6 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-right: 1rem;
+  }
+  .stack dd .d { display: block; color: var(--muted); font-size: 0.875rem; }
+  @media (max-width: 480px) {
+    .stack { grid-template-columns: 1fr; }
+    .stack dt { border-bottom: 0; padding-bottom: 0; }
+    .stack dd { padding-top: 0.15rem; }
+  }
+
   footer { font-size: 0.8125rem; color: var(--muted); }
 </style>
 </head>
@@ -188,6 +247,38 @@
     <h2>Scoring the optimizer minimizes</h2>
     <p>Lower is better. The formula comes from past seasons and still has to be confirmed against the 2027 rules.</p>
     <div class="formula">S = |h &minus; h_target| + 4&middot;d     d = max(0, 37 &minus; t, t &minus; 40)</div>
+  </section>
+
+  <section>
+    <h2>Current status</h2>
+    <p class="status-note">Design phase. The design document is written; no code has been built yet. Steps follow the document&rsquo;s build plan, in order.</p>
+    <ul class="status">
+      <li><span class="t">Design document<span class="d">Architecture, data contracts, scoring, risks and build plan.</span></span><span class="pill done">Done</span></li>
+      <li><span class="t">Project home page<span class="d">This page, served from the repository root.</span></span><span class="pill done">Done</span></li>
+      <li><span class="t">Validate the simulator<span class="d">Reproduce one or two real flights in OpenRocket within the team&rsquo;s tolerance.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Single-simulation script<span class="d">Request JSON in, result JSON out.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Optimizer script<span class="d">Sweep, Monte Carlo robustness check and ranking.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Worker and Firestore<span class="d">Polling worker, VM setup and security rules.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Web app<span class="d">Sign-in, conditions form, live job status and results.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Flight logging, calibration and weather pre-fill</span><span class="pill">Not started</span></li>
+      <li><span class="t">AI conditions parser<span class="d">Added last, once the form and schema are stable.</span></span><span class="pill">Not started</span></li>
+      <li><span class="t">Open questions for the team<span class="d">Validation tolerance, approved motors, 2027 score formula, where the parse function runs, who owns the accounts, first flight to reproduce.</span></span><span class="pill open">6 open</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Tech stack</h2>
+    <dl class="stack">
+      <dt>Web app</dt><dd>Static site on GitHub Pages<span class="d">Conditions form, job status and results; no server to run.</span></dd>
+      <dt>Sign-in</dt><dd>Firebase Auth with Google<span class="d">Allowlisted team accounts only.</span></dd>
+      <dt>Data</dt><dd>Cloud Firestore<span class="d">Collections: jobs, rockets, flights, results, calibration. The only link between web app and worker.</span></dd>
+      <dt>Worker</dt><dd>Python process on a rented VM or a laptop<span class="d">Polls Firestore for jobs; no inbound ports.</span></dd>
+      <dt>Simulator</dt><dd>OpenRocket 24.12 (Java), driven by orlab<span class="d">Packaged with the optimizer in one container. RocketSim kept as a cross-check.</span></dd>
+      <dt>Optimizer</dt><dd>Grid or random sweep, Bayesian optimization or CMA-ES, Monte Carlo<span class="d">Seeded and time-budgeted so results are reproducible.</span></dd>
+      <dt>AI parsing</dt><dd>Claude API, called from a parse function<span class="d">Cloud Function or worker job, still undecided. API key never reaches the browser.</span></dd>
+      <dt>Weather</dt><dd>Free forecast API, called from the browser<span class="d">Pre-fills the conditions form; always editable.</span></dd>
+      <dt>Uploads</dt><dd>Altimeter CSVs parsed in the browser<span class="d">Stored as numbers; no file storage in version 1.</span></dd>
+    </dl>
   </section>
 
   <section>
