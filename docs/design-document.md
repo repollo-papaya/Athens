@@ -316,9 +316,27 @@ batch interface.
 
 | Option | Strengths | Weaknesses | Decision |
 |---|---|---|---|
-| OpenRocket via Python | Free, widely used, scriptable. `orlab` loads `.ork` files and runs simulations from Python, tested against OpenRocket 24.12 and 23.09 | Needs a Java runtime on the worker | Primary engine |
+| OpenRocket via Python | Free, widely used, scriptable. [orlab](https://github.com/heibench/orlab) loads `.ork` files and runs simulations from Python, tested against OpenRocket 24.12 and 23.09 | Needs a Java runtime on the worker | Primary engine |
 | RocketSim (current tool) | The team already trusts and knows it | No batch interface found | Cross-check only |
 | Custom simulator in JS or Python | Full control, can run in the browser | Less accurate until calibrated; more code to maintain | Not in version 1 |
+
+OpenRocket is a 6-DOF simulator: extended Barrowman aerodynamics per component, drag built
+up from the geometry (skin friction, pressure, base and protrusion drag), RK4 integration,
+thrust curves from its motor database, and a standard atmosphere adjusted to the launch
+site. Because drag comes from the geometry, it needs no wind-tunnel or CFD data. RocketPy
+was also considered: it is a strong pure-Python 6-DOF simulator, but it needs a drag curve
+as input, so it is a candidate second opinion fed with OpenRocket's drag curve, not the
+main engine.
+
+How the app's launch conditions map to OpenRocket (implemented in `sim/simulate.py`):
+elevation sets the launch altitude, and station pressure is computed from it with the
+standard atmosphere; air temperature sets the launch temperature; wind speed sets the
+average wind. OpenRocket has no humidity input, so humidity is applied as a *virtual
+temperature*, the dry-air temperature with the same density as the humid air.
+
+With a fixed seed, OpenRocket 24.12 repeats a run exactly within one process, but its
+wind model adds per-process randomness, so separate runs differ by a fraction of a foot
+when there is wind. Rankings come from Monte Carlo means, so this does not change them.
 
 Calibration closes the gap between simulation and real flights. After each logged flight
 the app fits a small set of correction factors: a drag multiplier, a parachute drag
@@ -481,7 +499,9 @@ Each step produces something that works alone, so the next step can be tested ag
 
 Done so far: home page on GitHub Pages; Firestore project `athens-2509f` created, with a
 read/write connection test passing and security rules verified; the app's first page
-(`app/`) saves launch conditions to `launch_conditions`.
+(`app/`) saves launch conditions to `launch_conditions`; `sim/simulate.py` runs one
+OpenRocket 24.12 simulation from those conditions and prints apogee, duration and score
+as JSON (tested on OpenRocket's bundled ARC example rocket).
 
 Open questions for the team:
 
