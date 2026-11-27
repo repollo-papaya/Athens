@@ -465,10 +465,12 @@
     const others = tubes.filter(t => !t80.includes(t));
     const impulse = design.motors.reduce((a, m) => a + (m.total_impulse_ns || 0), 0);
     const menu = (window.designView && window.designView.menu) || [];
-    const approved = design.motors.every(m => menu.some(e => {
-      const core = e.designation.replace("/", "").toUpperCase();
-      return m.designation.toUpperCase().replace("/", "").includes(core);
-    }));
+    // Same matching as the worker: class-and-thrust core ("F59" in "F59WT" and Cesaroni's
+    // "57F59-12A") plus diameter. A motor the worker applied from the menu is approved.
+    const core = (t) => ((t.toUpperCase().replace("/", "").replace(/^[^A-Z]*/, "").match(/[A-Z]+\d+/) || [""])[0]);
+    const motorCore = (d) => core(d.split(" ").pop().replace(/^\d+/, ""));
+    const approved = !!(design.changes && design.changes.motor) || design.motors.every(m => menu.some(e =>
+      core(e.designation) === motorCore(m.designation) && Math.abs(e.diameter_mm - m.diameter_mm) <= 1));
     const add = (state, text, detail) => out.push({ state, text, detail });
     add(S.airframe_length_mm >= 650 ? "pass" : "fail", "At least 650 mm long", `${fmt(S.airframe_length_mm, 0)} mm`);
     add(S.mass_with_motor_g <= 650 ? "pass" : "fail", "No more than 650 g at liftoff", `${fmt(S.mass_with_motor_g, 0)} g`);
@@ -498,8 +500,9 @@
 
   function render() {
     const S = design.summary;
-    const name = (design.source || "").split("/").pop().replace(/\.ork$/, "") || design.name;
-    $("title").textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    const name = (design.source || "").split("/").pop().split(" ")[0].replace(/\.ork$/, "") || design.name;
+    const changed = !!(design.changes && Object.keys(design.changes).length);
+    $("title").textContent = name.charAt(0).toUpperCase() + name.slice(1) + (changed ? " (modified)" : "");
     const m = design.motors[0];
     $("subtitle").textContent = `${design.source || "Design"} · ${m ? m.designation + "-" + fmt(m.delay_s, 0) : "no motor"} · exported ${design.exported_on}`;
     if (design.changes && Object.keys(design.changes).length) {
@@ -508,7 +511,10 @@
       if (c.nose_ballast_g != null) bits.push(`${fmt(c.nose_ballast_g, 0)} g nose ballast`);
       if (c.added_mass_g != null) bits.push(`${c.added_mass_g >= 0 ? "+" : ""}${fmt(c.added_mass_g, 0)} g`);
       if (c.liftoff_mass_g != null) bits.push(`liftoff set to ${fmt(c.liftoff_mass_g, 0)} g`);
-      for (const [id, mm] of Object.entries(c.tube_lengths_mm || {})) bits.push(`part ${id} → ${fmt(mm, 0)} mm`);
+      for (const [id, mm] of Object.entries(c.tube_lengths_mm || {})) {
+        const t = byId[id];
+        bits.push(`${t ? fmt(2 * t.outer_radius_mm, 0) + " mm tube" : "tube " + id} → ${fmt(mm, 0)} mm`);
+      }
       $("subtitle").textContent = "Team rocket with changes: " + bits.join(" · ");
     }
     document.title = $("title").textContent + " · Rocket Design";
@@ -522,7 +528,10 @@
       ["CG", cm(S.cg_mm), "from the nose tip"],
       ["CP", cm(S.cp_mm), `at Mach ${S.cp_mach}`],
     ];
-    if (m) items.push(["Motor", m.designation.replace(/^AeroTech /, "") + "-" + fmt(m.delay_s, 0), `${fmt(m.total_impulse_ns, 1)} N·s · ${fmt(m.launch_mass_g, 0)} g`]);
+    if (m) {
+      const label = (design.changes && design.changes.motor) || (m.designation.split(" ").pop() + "-" + fmt(m.delay_s, 0));
+      items.push(["Motor", label, `${fmt(m.diameter_mm, 0)} mm · ${fmt(m.total_impulse_ns, 1)} N·s · ${fmt(m.launch_mass_g, 0)} g`]);
+    }
     $("readouts").replaceChildren(...items.map(([k, v, s]) => {
       const div = document.createElement("div");
       const dt = document.createElement("dt"); dt.textContent = k;
