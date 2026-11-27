@@ -22,7 +22,7 @@ service cloud.firestore {
     // Only these accounts may claim simulation requests and write results.
     function isWorker() {
       return signedIn() && request.auth.uid in [
-        // "WORKER_UID_HERE",
+        "lfmKu1teWeamNsayaEFL8n1rwar1",   // temporary test worker (cloud session, Nov 27 2026); remove when retired
       ];
     }
 

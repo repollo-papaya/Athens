@@ -10,7 +10,7 @@ Set up once per computer:
     python sim/worker.py --register
         Creates this worker's own Firebase account and saves its sign-in key in
         ~/.config/athens-worker.json (never in the repo). Prints the worker ID:
-        add it to WORKER_UIDS in firestore.rules and publish the rules.
+        add it to isWorker() in firestore.rules and publish the rules.
 
 Run:
 
@@ -102,7 +102,7 @@ def register(cfg: dict) -> None:
                                   "registered": datetime.now(timezone.utc).isoformat()}))
     CONFIG.chmod(0o600)
     print(f"Registered worker {r['localId']}.\nSign-in key saved to {CONFIG} (keep it private).\n"
-          f"Add this ID to WORKER_UIDS in firestore.rules and publish the rules.")
+          f"Add this ID to isWorker() in firestore.rules and publish the rules.")
 
 
 # ---------------------------------------------------------------------------
