@@ -175,6 +175,78 @@ class Store:
 # Jobs
 # ---------------------------------------------------------------------------
 
+MOTOR_MENU = ROOT / "data" / "motor_menu.json"
+MAX_TUBE_MM, MIN_TUBE_MM = 1500.0, 50.0
+
+
+def design_changes(changes: dict):
+    """Check a request's design changes and turn them into simulation arguments.
+
+    Returns (prepare, motor, delay_s, listeners, extra_mass_g, liftoff_mass_g, applied),
+    where `applied` describes what was changed, for the app to show.
+    """
+    from openrocket import (add_nose_ballast, component_by_id, find_motor, motor_mount,
+                            set_mount_diameter, thrust_scale_listener)
+    applied: dict = {}
+    motor = delay = None
+    listeners = []
+    entry = None
+    if changes.get("motor"):
+        menu = {m["key"]: m for m in json.loads(MOTOR_MENU.read_text())["motors"]}
+        entry = menu.get(changes["motor"])
+        if entry is None:
+            raise ValueError(f"motor {changes['motor']} is not on the ARC 2027 approved list")
+        if entry["total_impulse_ns"] > 80:
+            raise ValueError("ARC allows at most 80 N-s")
+        delay = float(changes.get("delay_s", entry["delays_s"][0] if entry["delays_s"] else 0))
+        if entry["delays_s"] and delay not in entry["delays_s"]:
+            raise ValueError(f"{entry['designation']} delays are {entry['delays_s']} s, not {delay:g}")
+        motor = find_motor(entry["designation"], entry["manufacturer"], entry["total_impulse_ns"], entry["diameter_mm"])
+        if motor is None:
+            raise ValueError(f"OpenRocket has no data for {entry['designation']}")
+        listeners.append(thrust_scale_listener(entry["total_impulse_ns"] / float(motor.getTotalImpulseEstimate())))
+        applied["motor"] = f"{entry['manufacturer']} {entry['designation']}-{delay:g}"
+
+    lengths = {int(k): float(v) for k, v in (changes.get("tube_lengths_mm") or {}).items()}
+    for v in lengths.values():
+        if not MIN_TUBE_MM <= v <= MAX_TUBE_MM:
+            raise ValueError(f"tube lengths must be {MIN_TUBE_MM:g}-{MAX_TUBE_MM:g} mm")
+
+    mode = changes.get("mass_mode")
+    mass = changes.get("mass_g")
+    if mass is not None:
+        mass = float(mass)
+        if mode == "nose" and not 0 <= mass <= 300:
+            raise ValueError("nose ballast must be 0-300 g")
+        if mode == "total" and not 100 <= mass <= 1000:
+            raise ValueError("liftoff mass must be 100-1000 g")
+        if mode == "spread" and not -300 <= mass <= 300:
+            raise ValueError("added mass must be -300 to +300 g")
+
+    def prepare(rocket):
+        if entry is not None:
+            mount = motor_mount(rocket)
+            length = max(float(mount.getLength()) * 1000, entry["length_mm"] + 5)
+            set_mount_diameter(rocket, entry["diameter_mm"], length)
+        for cid, mm in lengths.items():
+            c = component_by_id(rocket, cid)
+            if c is None or str(c.getClass().getSimpleName()) != "BodyTube":
+                raise ValueError(f"part {cid} is not a body tube")
+            c.setLength(mm / 1000.0)
+            applied.setdefault("tube_lengths_mm", {})[str(cid)] = mm
+        if mass is not None and mode == "nose":
+            add_nose_ballast(rocket, mass)
+            applied["nose_ballast_g"] = mass
+
+    extra = mass if (mass is not None and mode == "spread") else None
+    total = mass if (mass is not None and mode == "total") else None
+    if extra is not None:
+        applied["added_mass_g"] = extra
+    if total is not None:
+        applied["liftoff_mass_g"] = total
+    return prepare, motor, delay, listeners, extra, total, applied
+
+
 def run_job(orl, job: dict, calibration) -> dict:
     from openrocket import Launch
     from simulate import run_with
@@ -185,9 +257,23 @@ def run_job(orl, job: dict, calibration) -> dict:
     launch = Launch(elevation_ft=float(w["elevation_ft"]), wind_mph=float(w["wind_mph"]),
                     humidity_pct=float(w["humidity_pct"]), temperature_f=float(w["temperature_f"]))
     cal = calibration if calibration and calibration.get("rocket") == ROCKETS[rocket].name else None
+    changes = job.get("changes")
+    extra_args, applied = {}, None
+    if changes is not None:
+        prepare, motor, delay, listeners, extra, total, applied = design_changes(changes)
+        extra_args = dict(prepare=prepare, motor=motor, delay_s=delay, listeners=listeners,
+                          extra_mass_g=extra, liftoff_mass_g=total, keep_doc=True)
     result = run_with(orl, ROCKETS[rocket], launch, calibration=cal,
-                      target_apogee_ft=float(job.get("target_apogee_ft", 800)))
+                      target_apogee_ft=float(job.get("target_apogee_ft", 800)), **extra_args)
     p = result["predicted"]
+    design_json = None
+    if changes is not None:
+        from design import export
+        flight = {"conditions": w, "calibration_id": result["calibration_id"], "predicted": p,
+                  "score": result["score"], "target_apogee_ft": result["target_apogee_ft"]}
+        design = export(orl, result.pop("_doc"), flight=flight, source=f"rockets/{rocket}.ork with changes")
+        design["changes"] = applied
+        design_json = json.dumps(design)   # Firestore cannot hold the fin outline's nested lists
     return {   # what the app shows; units in the names
         "sim_version": result["sim_version"],
         "calibration_id": result["calibration_id"],
@@ -201,6 +287,7 @@ def run_job(orl, job: dict, calibration) -> dict:
         "descent_rate_fps": p["descent_rate_fps"], "landing_distance_ft": p["landing_distance_ft"],
         "target_apogee_ft": result["target_apogee_ft"], "score": result["score"],
         "warnings": result["warnings"],
+        **({"design_json": design_json, "changes": applied} if design_json else {}),
     }
 
 

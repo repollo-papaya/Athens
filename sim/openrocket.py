@@ -152,7 +152,7 @@ def set_liftoff_mass(rocket, config, liftoff_mass_g: float) -> None:
 
 def configure(orl, doc, launch: Launch, *, motor: str | None = None, manufacturer: str | None = None,
               delay_s: float | None = None, liftoff_mass_g: float | None = None,
-              chute_cd_scale: float = 1.0):
+              chute_cd_scale: float = 1.0, extra_mass_g: float | None = None):
     """Return a simulation of `doc`'s rocket with every option set from `launch`.
 
     Uses the design's first motor configuration unless `motor` is given. With
@@ -171,8 +171,12 @@ def configure(orl, doc, launch: Launch, *, motor: str | None = None, manufacture
         orl.set_motor(sim, motor, manufacturer=manufacturer, delay=delay_s)
     elif delay_s is not None:
         raise SystemExit("--delay-s needs --motor")
-    if liftoff_mass_g is not None:
-        set_liftoff_mass(rocket, rocket.getFlightConfiguration(sim.getFlightConfigurationId()), liftoff_mass_g)
+    if liftoff_mass_g is not None or extra_mass_g:
+        config = rocket.getFlightConfiguration(sim.getFlightConfigurationId())
+        if liftoff_mass_g is None:   # add or remove mass relative to the rocket as it now stands
+            MassCalculator = jpype.JClass("info.openrocket.core.masscalc.MassCalculator")
+            liftoff_mass_g = float(MassCalculator.calculateLaunch(config).getMass()) * 1000 + extra_mass_g
+        set_liftoff_mass(rocket, config, liftoff_mass_g)
     if chute_cd_scale != 1.0:
         for c in orl.get_all_components(rocket):
             if str(c.getClass().getSimpleName()) == "Parachute":
@@ -252,6 +256,18 @@ def describe_rocket(orl, doc, sim) -> dict:
 # Design changes used by the motor study
 # ---------------------------------------------------------------------------
 
+def component_by_id(rocket, component_id: int):
+    """The component with this id in design.py's export (walk order, skipping rocket and stages)."""
+    i = 0
+    for c in _walk(rocket):
+        if str(c.getClass().getSimpleName()) in ("Rocket", "AxialStage"):
+            continue
+        if i == component_id:
+            return c
+        i += 1
+    return None
+
+
 def motor_mount(rocket):
     """The design's motor-mount tube."""
     for c in _walk(rocket):
@@ -317,21 +333,27 @@ def find_motor(designation: str, manufacturer_hint: str, nar_impulse_ns: float, 
     """
     import re
     db = jpype.JClass("info.openrocket.core.startup.Application").getMotorSetDatabase()
-    want_core = re.match(r"[A-Z]+\d+", designation.upper().replace("/", "")).group()
+    want_core = re.search(r"[A-Z]+\d+", designation.upper().replace("/", "")).group()
     maker = {"aerotech": "aerotech", "cesaroni": "cesaroni", "estes": "estes", "qjet/at": "aerotech"}.get(
         manufacturer_hint.lower(), manufacturer_hint.lower())
-    best = None
-    for ms in db.getMotorSets():
-        des = str(ms.getDesignation()).upper().replace("/", "")
-        core = re.match(r"[A-Z]+\d+", re.sub(r"^\d+", "", des))
-        if not core or core.group() != want_core:
-            continue
-        if maker not in str(ms.getManufacturer().getDisplayName()).lower().replace(" ", ""):
-            continue
-        for m in ms.getMotors():
-            if abs(float(m.getDiameter()) * 1000 - diameter_mm) > 1:
+
+    def search(require_maker: bool):
+        best = None
+        for ms in db.getMotorSets():
+            des = str(ms.getDesignation()).upper().replace("/", "")
+            core = re.match(r"[A-Z]+\d+", re.sub(r"^\d+", "", des))
+            if not core or core.group() != want_core:
                 continue
-            gap = abs(float(m.getTotalImpulseEstimate()) - nar_impulse_ns)
-            if best is None or gap < best[0]:
-                best = (gap, m)
-    return best[1] if best else None
+            if require_maker and maker not in str(ms.getManufacturer().getDisplayName()).lower().replace(" ", ""):
+                continue
+            for m in ms.getMotors():
+                if abs(float(m.getDiameter()) * 1000 - diameter_mm) > 1:
+                    continue
+                gap = abs(float(m.getTotalImpulseEstimate()) - nar_impulse_ns)
+                if best is None or gap < best[0]:
+                    best = (gap, m)
+        return best[1] if best else None
+
+    # Rebadged motors (Estes-branded AeroTech, QJet made by AeroTech or Quest) may be
+    # listed under another maker; fall back to class, thrust, diameter and impulse.
+    return search(True) or search(False)

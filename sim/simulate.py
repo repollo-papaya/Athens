@@ -95,16 +95,25 @@ def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, br
 
 
 def run_with(orl, ork: Path, launch, *, motor=None, manufacturer=None, delay_s=None,
-             target_apogee_ft=DEFAULT_TARGET_APOGEE_FT, branch=0, liftoff_mass_g=None, calibration=None) -> dict:
-    """One flight on an already-running OpenRocket (the worker keeps one open)."""
+             target_apogee_ft=DEFAULT_TARGET_APOGEE_FT, branch=0, liftoff_mass_g=None, calibration=None,
+             prepare=None, extra_mass_g=None, listeners=None, keep_doc=False) -> dict:
+    """One flight on an already-running OpenRocket (the worker keeps one open).
+
+    `prepare(rocket)` changes the design before the flight (tube lengths, mount,
+    ballast); `extra_mass_g` adds or removes mass keeping the CG; `listeners` run
+    during the flight (e.g. thrust scaling). With `keep_doc`, the changed document
+    is returned under "_doc" so the caller can export the design.
+    """
     import orlab
     from openrocket import configure, describe_rocket
 
     scale = calibration["chute_cd_scale"] if calibration else 1.0
     doc = orl.load_doc(str(ork))
+    if prepare:
+        prepare(doc.getRocket())
     sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
-                    liftoff_mass_g=liftoff_mass_g, chute_cd_scale=scale)
-    orl.run_simulation(sim, randomize_seed=False)
+                    liftoff_mass_g=liftoff_mass_g, chute_cd_scale=scale, extra_mass_g=extra_mass_g)
+    orl.run_simulation(sim, listeners=listeners or None, randomize_seed=False)
     s = orl.get_summary(sim, branch_number=branch)
     T = orlab.FlightDataType
     series = orl.get_timeseries(sim, [T.TYPE_MASS, T.TYPE_CG_LOCATION], branch_number=branch)
@@ -142,6 +151,7 @@ def run_with(orl, ork: Path, launch, *, motor=None, manufacturer=None, delay_s=N
         "target_apogee_ft": target_apogee_ft,
         "warnings": [str(w) for w in s.warnings]
                     + ([] if calibration else ["uncalibrated: no calibration applied"]),
+        **({"_doc": doc} if keep_doc else {}),
     }
 
 

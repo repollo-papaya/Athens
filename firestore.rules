@@ -36,6 +36,17 @@ service cloud.firestore {
         && inRange(w.temperature_f, -40, 130);
     }
 
+    // Design changes the app may ask a worker to try (the worker checks them again).
+    function validChanges(c) {
+      return c is map
+        && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm'])
+        && (!('motor' in c) || (c.motor is string && c.motor.size() <= 40))
+        && (!('delay_s' in c) || inRange(c.delay_s, 0, 20))
+        && (!('mass_g' in c) || inRange(c.mass_g, -300, 1000))
+        && (!('mass_mode' in c) || c.mass_mode in ['nose', 'spread', 'total'])
+        && (!('tube_lengths_mm' in c) || (c.tube_lengths_mm is map && c.tube_lengths_mm.size() <= 6));
+    }
+
     match /launch_conditions/{conditionsId} {
       allow create: if signedIn()
         && request.resource.data.keys().hasAll(['schema_version', 'uid', 'created_at', 'weather'])
@@ -56,7 +67,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasAll(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather'])
         && request.resource.data.keys().hasOnly(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather',
-                                                 'conditions_id', 'target_apogee_ft'])
+                                                 'conditions_id', 'target_apogee_ft', 'changes'])
         && request.resource.data.schema_version == 1
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.created_at == request.time
@@ -65,7 +76,8 @@ service cloud.firestore {
         && validWeather(request.resource.data.weather)
         && (!('conditions_id' in request.resource.data) || (request.resource.data.conditions_id is string
               && request.resource.data.conditions_id.size() <= 64))
-        && (!('target_apogee_ft' in request.resource.data) || inRange(request.resource.data.target_apogee_ft, 700, 900));
+        && (!('target_apogee_ft' in request.resource.data) || inRange(request.resource.data.target_apogee_ft, 700, 900))
+        && (!('changes' in request.resource.data) || validChanges(request.resource.data.changes));
 
       // Owners see their own requests; workers see all of them.
       allow read: if signedIn()

@@ -11,6 +11,7 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
 | `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
 | `design.py` | Exports a design (every part, CG, CP, stability, motor, predicted flight) as JSON for the app's design view (`app/design.html`) |
+| `motor_menu.py` | Builds `data/motor_menu.json`, the app's motor dropdown: every ARC 2027 approved motor with its usable delays |
 | `worker.py` | Runs the app's simulation requests: watches Firestore, runs OpenRocket, writes results back |
 | `motors.py` | Studies every ARC 2027 approved 29 mm motor in the design (`data/arc2027_motors.csv`); results in `data/motor_study_2027.json` |
 
@@ -87,6 +88,12 @@ python sim/worker.py --once    # handle what is waiting, then stop
 
 If nothing is running, requests wait as "Queued" and the app says no worker has
 picked them up.
+
+The design page (`app/design.html`) sends requests with **changes**: a motor from the
+approved list (the mount resizes to fit it) and its delay, nose ballast, added or
+removed mass (keeping the CG) or a measured liftoff mass, and body tube lengths. The
+worker checks every change again, applies it, flies the rocket, and returns the
+redrawn design with its flight; the page shows it with the 2027 rules check.
 
 ## Simulation inputs are set here, not taken from the .ork
 
