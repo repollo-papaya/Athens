@@ -5,6 +5,7 @@ rules_version = '2';
 // Open collections:
 //   connection_tests   temporary documents written by firebase-test.html
 //   launch_conditions  launch conditions saved by the app's first page (app/)
+//   sim_jobs           simulation requests from the app, run by a worker (sim/worker.py)
 // Everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,6 +16,14 @@ service cloud.firestore {
 
     function inRange(value, low, high) {
       return value is number && value >= low && value <= high;
+    }
+
+    // Simulation workers: IDs printed by `python sim/worker.py --register`.
+    // Only these accounts may claim simulation requests and write results.
+    function isWorker() {
+      return signedIn() && request.auth.uid in [
+        // "WORKER_UID_HERE",
+      ];
     }
 
     // Launch conditions (category 1, weather). Units are in the field names.
@@ -39,6 +48,37 @@ service cloud.firestore {
       // Each user reads only what they saved. Saved conditions are never edited or deleted.
       allow read: if signedIn()
         && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
+    // Simulation requests. The app creates them (status "pending"); a worker claims
+    // one ("running") and finishes it ("done" with a result, or "failed" with an error).
+    match /sim_jobs/{jobId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather'])
+        && request.resource.data.keys().hasOnly(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather',
+                                                 'conditions_id', 'target_apogee_ft'])
+        && request.resource.data.schema_version == 1
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at == request.time
+        && request.resource.data.status == 'pending'
+        && request.resource.data.rocket in ['ederance']
+        && validWeather(request.resource.data.weather)
+        && (!('conditions_id' in request.resource.data) || (request.resource.data.conditions_id is string
+              && request.resource.data.conditions_id.size() <= 64))
+        && (!('target_apogee_ft' in request.resource.data) || inRange(request.resource.data.target_apogee_ft, 700, 900));
+
+      // Owners see their own requests; workers see all of them.
+      allow read: if signedIn()
+        && (resource == null || resource.data.uid == request.auth.uid || isWorker());
+
+      // Only a worker changes a request, only its status fields, and only forward.
+      allow update: if isWorker()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'claimed_by', 'started_at', 'finished_at', 'result', 'error'])
+        && ((resource.data.status == 'pending' && request.resource.data.status == 'running'
+               && request.resource.data.claimed_by == request.auth.uid)
+            || (resource.data.status == 'running' && request.resource.data.status in ['done', 'failed']
+               && resource.data.claimed_by == request.auth.uid));
     }
 
     match /connection_tests/{testId} {

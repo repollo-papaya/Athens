@@ -14,6 +14,7 @@
     --field: #f9fafb;
     --accent: #c2410c; --accent-fg: #ffffff;
     --ok-bg: #e7f5ec; --ok-line: #b6e0c4; --ok-fg: #1d6b3a;
+    --warn-bg: #fdf3e2; --warn-line: #f0d3a0; --warn-fg: #8a5a0b;
     --bad-bg: #fbeaea; --bad-line: #efc0c0; --bad-fg: #9b2222;
     --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
     --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -26,6 +27,7 @@
       --field: #121a22;
       --accent: #fb7a3c; --accent-fg: #1a0d05;
       --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+      --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
       --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
       color-scheme: dark;
     }
@@ -35,6 +37,7 @@
     --field: #121a22;
     --accent: #fb7a3c; --accent-fg: #1a0d05;
     --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+    --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
     --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
     color-scheme: dark;
   }
@@ -107,7 +110,7 @@
   .saved strong { font-weight: 600; }
   .saved .meta { font: 400 0.8125rem/1.4 var(--font-mono); overflow-wrap: anywhere; }
 
-  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  .table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
   table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
   th, td { text-align: right; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
   th { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
@@ -115,6 +118,34 @@
   td { font-family: var(--font-mono); }
   tr:last-child td { border-bottom: 0; }
   tr.new td { background: var(--ok-bg); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  button.secondary {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    min-height: 2.25rem; padding: 0.4rem 0.8rem; font-size: 0.875rem; width: auto;
+  }
+  .saved button.secondary { justify-self: start; margin-top: 0.4rem; color: var(--ok-fg); border-color: var(--ok-fg); }
+  td.act { text-align: right; padding-block: 0.3rem; }
+
+  .sim { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1.25rem; display: grid; gap: 0.6rem; }
+  .sim-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .sim-head h2 { margin: 0; }
+  .sim-for, .sim-note { font-size: 0.875rem; color: var(--muted); }
+  .sim-note:empty { display: none; }
+  .pill {
+    font: 500 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.35rem 0.55rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  }
+  .pill.running { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-fg); }
+  .pill.done { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-fg); }
+  .pill.failed { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-fg); }
+  .results { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.5rem; }
+  .results div { border: 1px solid var(--line); border-radius: 4px; padding: 0.55rem 0.7rem; min-width: 0; }
+  .results dt { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .results dd { margin: 0.25rem 0 0; font: 500 1.125rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .results dd small { display: block; font: 400 0.75rem/1.3 var(--font-body); color: var(--muted); margin-top: 0.15rem; }
+  .results div.good { border-color: var(--ok-line); background: var(--ok-bg); }
+  .results div.off { border-color: var(--warn-line); background: var(--warn-bg); }
+  .sim-warnings { margin: 0; padding-left: 1.1rem; font-size: 0.875rem; color: var(--warn-fg); }
   .empty { padding: 1rem; color: var(--muted); font: 400 0.875rem/1.5 var(--font-body); white-space: normal; text-align: left; }
 </style>
 </head>
@@ -164,12 +195,23 @@
 
   <div class="saved" id="saved" hidden></div>
 
+  <section class="sim" id="sim" hidden aria-live="polite">
+    <div class="sim-head">
+      <h2>Simulation</h2>
+      <span class="pill" id="sim-status">Queued</span>
+    </div>
+    <p class="sim-for" id="sim-for"></p>
+    <p class="sim-note" id="sim-note"></p>
+    <dl class="results" id="sim-results" hidden></dl>
+    <ul class="sim-warnings" id="sim-warnings" hidden></ul>
+  </section>
+
   <section>
     <h2>Your saved conditions</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Saved</th><th>Elevation</th><th>Wind</th><th>Humidity</th><th>Temp</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="5" class="empty">Loading&hellip;</td></tr></tbody>
+        <thead><tr><th>Saved</th><th>Elevation</th><th>Wind</th><th>Humidity</th><th>Temp</th><th><span class="sr-only">Simulate</span></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">Loading&hellip;</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -181,7 +223,7 @@
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, getDocFromServer, getDocsFromServer,
-    query, where, limit, serverTimestamp
+    query, where, limit, serverTimestamp, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const FIELDS = ["elevation_ft", "wind_mph", "humidity_pct", "temperature_f"];
@@ -191,6 +233,14 @@
   const savedEl = document.getElementById("saved");
   const rowsEl = document.getElementById("rows");
   const whoEl = document.getElementById("who");
+  const simEl = document.getElementById("sim");
+  const simStatusEl = document.getElementById("sim-status");
+  const simForEl = document.getElementById("sim-for");
+  const simNoteEl = document.getElementById("sim-note");
+  const simResultsEl = document.getElementById("sim-results");
+  const simWarningsEl = document.getElementById("sim-warnings");
+  const QUALIFICATION_TARGET_FT = 800;      // ARC 2027 qualification target
+  const DURATION_WINDOW_S = [37, 40];       // ARC 2027 duration window
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -252,7 +302,7 @@
         .sort((a, b) => (b.created_at?.toMillis?.() ?? 0) - (a.created_at?.toMillis?.() ?? 0))
         .slice(0, 10);
       if (!docs.length) {
-        rowsEl.innerHTML = '<tr><td colspan="5" class="empty">Nothing saved yet. Conditions you save appear here.</td></tr>';
+        rowsEl.innerHTML = '<tr><td colspan="6" class="empty">Nothing saved yet. Conditions you save appear here.</td></tr>';
         return;
       }
       rowsEl.replaceChildren(...docs.map(d => {
@@ -262,13 +312,116 @@
         for (const text of [when(d.created_at), fmt(w.elevation_ft, " ft"), fmt(w.wind_mph, " mph"), fmt(w.humidity_pct, "%"), fmt(w.temperature_f, " °F")]) {
           const td = document.createElement("td"); td.textContent = text; tr.appendChild(td);
         }
+        const act = document.createElement("td");
+        act.className = "act";
+        act.appendChild(simulateButton(w, d.id, "Simulate"));
+        tr.appendChild(act);
         return tr;
       }));
     } catch (err) {
       rowsEl.innerHTML = "";
       const tr = document.createElement("tr"), td = document.createElement("td");
-      td.colSpan = 5; td.className = "empty"; td.textContent = explain(err);
+      td.colSpan = 6; td.className = "empty"; td.textContent = explain(err);
       tr.appendChild(td); rowsEl.appendChild(tr);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Simulation: write a request; a worker (sim/worker.py) runs OpenRocket
+  // and writes the result back to the same document, which we watch live.
+  // ---------------------------------------------------------------------
+  let stopWatching = null;
+  let waitTimer = null;
+
+  function simulateButton(weather, conditionsId, label) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "secondary";
+    b.textContent = label;
+    b.addEventListener("click", () => simulate(weather, conditionsId));
+    return b;
+  }
+
+  function cell(label, value, note, state) {
+    const div = document.createElement("div");
+    if (state) div.className = state;
+    const dt = document.createElement("dt"); dt.textContent = label;
+    const dd = document.createElement("dd"); dd.textContent = value;
+    if (note) { const sm = document.createElement("small"); sm.textContent = note; dd.appendChild(sm); }
+    div.append(dt, dd);
+    return div;
+  }
+
+  function showJob(job) {
+    const status = job.status || "pending";
+    simStatusEl.className = "pill " + (status === "pending" ? "" : status);
+    simStatusEl.textContent = { pending: "Queued", running: "Running", done: "Done", failed: "Failed" }[status] || status;
+    if (status !== "pending") { clearTimeout(waitTimer); simNoteEl.textContent = ""; }
+    if (status === "running") simNoteEl.textContent = "OpenRocket is flying the rocket…";
+    if (status === "failed") simNoteEl.textContent = "The simulation failed: " + (job.error || "no reason given");
+    simResultsEl.hidden = status !== "done";
+    simWarningsEl.hidden = true;
+    if (status !== "done") return;
+
+    const r = job.result || {};
+    const [lo, hi] = DURATION_WINDOW_S;
+    const target = r.target_apogee_ft ?? QUALIFICATION_TARGET_FT;
+    const altErr = r.apogee_ft - target;
+    const inWindow = r.duration_s >= lo && r.duration_s <= hi;
+    const n = (x, d = 1) => (x == null ? "—" : Number(x).toLocaleString(undefined, { maximumFractionDigits: d }));
+    simResultsEl.replaceChildren(
+      cell("Apogee", n(r.apogee_ft, 0) + " ft", `${altErr >= 0 ? "+" : ""}${n(altErr, 0)} ft from ${target}`, Math.abs(altErr) <= 25 ? "good" : "off"),
+      cell("Duration", n(r.duration_s) + " s", inWindow ? `inside ${lo}–${hi} s` : `window is ${lo}–${hi} s`, inWindow ? "good" : "off"),
+      cell("Score", n(r.score?.total), "lower is better (assumed formula)"),
+      cell("Stability off rail", n(r.stability_off_rail_cal, 2) + " cal", "min in flight " + n(r.min_stability_cal, 2), r.stability_off_rail_cal >= 1 ? "good" : "off"),
+      cell("Speed off rail", n(r.velocity_off_rail_fps, 0) + " ft/s", "", r.velocity_off_rail_fps >= 45 ? "good" : "off"),
+      cell("Peak acceleration", n(r.max_acceleration_g) + " g"),
+      cell("Descent rate", n(r.descent_rate_fps) + " ft/s"),
+      cell("Lands", n(r.landing_distance_ft, 0) + " ft away"),
+      cell("Best delay", n(r.optimum_delay_s) + " s", "time from burnout to apogee"),
+      cell("Motor", r.motor || "—"),
+      cell("Liftoff mass", n(r.liftoff_mass_g, 0) + " g", "design as drawn"),
+      cell("Calibration", r.calibration_id || "none", r.sim_version || ""),
+    );
+    if (r.warnings && r.warnings.length) {
+      simWarningsEl.replaceChildren(...r.warnings.map(w => { const li = document.createElement("li"); li.textContent = w; return li; }));
+      simWarningsEl.hidden = false;
+    }
+  }
+
+  async function simulate(weather, conditionsId) {
+    if (!user) return;
+    if (stopWatching) stopWatching();
+    clearTimeout(waitTimer);
+    simEl.hidden = false;
+    simResultsEl.hidden = true;
+    simWarningsEl.hidden = true;
+    simStatusEl.className = "pill";
+    simStatusEl.textContent = "Sending";
+    simForEl.textContent = `Team rocket (ederance.ork) at ${fmt(weather.elevation_ft, " ft")}, ${fmt(weather.wind_mph, " mph")} wind, ${fmt(weather.humidity_pct, "%")} humidity, ${fmt(weather.temperature_f, " °F")}.`;
+    simNoteEl.textContent = "";
+    simEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    try {
+      const ref = await addDoc(collection(db, "sim_jobs"), {
+        schema_version: 1,
+        uid: user.uid,
+        created_at: serverTimestamp(),
+        status: "pending",
+        rocket: "ederance",
+        weather: Object.fromEntries(FIELDS.map(k => [k, weather[k]])),
+        conditions_id: conditionsId,
+        target_apogee_ft: QUALIFICATION_TARGET_FT,
+      });
+      waitTimer = setTimeout(() => {
+        simNoteEl.textContent = "Waiting for a simulation worker. If this stays queued, no worker is running: start one with python sim/worker.py.";
+      }, 20000);
+      stopWatching = onSnapshot(ref, (snap) => snap.exists() && showJob(snap.data()),
+        (err) => { simStatusEl.className = "pill failed"; simStatusEl.textContent = "Error"; simNoteEl.textContent = explain(err); });
+    } catch (err) {
+      console.error(err);
+      simStatusEl.className = "pill failed";
+      simStatusEl.textContent = "Not sent";
+      simNoteEl.textContent = explain(err);
     }
   }
 
@@ -301,7 +454,7 @@
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.textContent = `launch_conditions/${ref.id} · server time ${when(snap.data().created_at)}`;
-      savedEl.append(head, vals, meta);
+      savedEl.append(head, vals, meta, simulateButton(stored, ref.id, "Simulate this flight"));
       savedEl.hidden = false;
       setStatus("");
       await loadRecent(ref.id);
@@ -325,7 +478,7 @@
   signInAnonymously(auth).catch((err) => {
     whoEl.textContent = "Not connected";
     setStatus(explain(err), true);
-    rowsEl.innerHTML = '<tr><td colspan="5" class="empty">Not connected to the database.</td></tr>';
+    rowsEl.innerHTML = '<tr><td colspan="6" class="empty">Not connected to the database.</td></tr>';
   });
 </script>
 </body>

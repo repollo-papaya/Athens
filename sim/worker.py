@@ -1,0 +1,263 @@
+"""Simulation worker: runs the app's simulation requests with OpenRocket.
+
+The app writes a request to Firestore (`sim_jobs`, status "pending"). This worker
+watches for them, claims one (so two workers never run the same request), runs
+the simulation and writes the result back (status "done", or "failed" with an
+error). It makes no inbound connections; it only talks to Firebase.
+
+Set up once per computer:
+
+    python sim/worker.py --register
+        Creates this worker's own Firebase account and saves its sign-in key in
+        ~/.config/athens-worker.json (never in the repo). Prints the worker ID:
+        add it to WORKER_UIDS in firestore.rules and publish the rules.
+
+Run:
+
+    python sim/worker.py               # keep running, check every 3 s
+    python sim/worker.py --once        # handle what is waiting, then stop
+
+Only workers listed in firestore.rules can claim requests or write results.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+import traceback
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = Path(os.environ.get("ATHENS_WORKER_CONFIG", Path.home() / ".config" / "athens-worker.json"))
+COLLECTION = "sim_jobs"
+ROCKETS = {"ederance": ROOT / "rockets" / "ederance.ork"}   # rockets the app may ask for
+
+
+def firebase_config() -> dict:
+    """apiKey and projectId from firebase-config.js, the same values the web app uses."""
+    text = (ROOT / "firebase-config.js").read_text()
+    import re
+    return {k: re.search(k + r':\s*"([^"]+)"', text).group(1) for k in ("apiKey", "projectId")}
+
+
+def _http(method: str, url: str, body=None, token: str | None = None, form: bool = False):
+    headers = {"Content-Type": "application/x-www-form-urlencoded" if form else "application/json"}
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    data = None
+    if body is not None:
+        data = (urllib.parse.urlencode(body) if form else json.dumps(body)).encode()
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"{}")
+
+
+import urllib.parse  # noqa: E402  (used by _http)
+
+
+# ---------------------------------------------------------------------------
+# Auth: the worker's own account; the refresh token stays on this computer
+# ---------------------------------------------------------------------------
+
+class Session:
+    def __init__(self, cfg: dict):
+        self.key, self.project = cfg["apiKey"], cfg["projectId"]
+        saved = json.loads(CONFIG.read_text())
+        self.uid, self.refresh_token = saved["uid"], saved["refresh_token"]
+        self.token, self.expires = None, 0.0
+
+    def id_token(self) -> str:
+        if time.time() < self.expires - 120:
+            return self.token
+        status, r = _http("POST", f"https://securetoken.googleapis.com/v1/token?key={self.key}",
+                          {"grant_type": "refresh_token", "refresh_token": self.refresh_token}, form=True)
+        if status != 200:
+            raise SystemExit(f"Worker sign-in failed ({r.get('error', r)}). Run --register again.")
+        self.token, self.expires = r["id_token"], time.time() + int(r["expires_in"])
+        self.refresh_token = r["refresh_token"]
+        return self.token
+
+
+def register(cfg: dict) -> None:
+    if CONFIG.exists():
+        uid = json.loads(CONFIG.read_text())["uid"]
+        print(f"This computer is already registered as worker {uid} ({CONFIG}).")
+        return
+    status, r = _http("POST", f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={cfg['apiKey']}",
+                      {"returnSecureToken": True})
+    if status != 200:
+        raise SystemExit(f"Could not create the worker account: {r.get('error', r)}")
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG.write_text(json.dumps({"uid": r["localId"], "refresh_token": r["refreshToken"],
+                                  "registered": datetime.now(timezone.utc).isoformat()}))
+    CONFIG.chmod(0o600)
+    print(f"Registered worker {r['localId']}.\nSign-in key saved to {CONFIG} (keep it private).\n"
+          f"Add this ID to WORKER_UIDS in firestore.rules and publish the rules.")
+
+
+# ---------------------------------------------------------------------------
+# Firestore REST: values in and out
+# ---------------------------------------------------------------------------
+
+def to_value(v):
+    if v is None:
+        return {"nullValue": None}
+    if isinstance(v, bool):
+        return {"booleanValue": v}
+    if isinstance(v, int):
+        return {"integerValue": str(v)}
+    if isinstance(v, float):
+        return {"doubleValue": v}
+    if isinstance(v, str):
+        return {"stringValue": v}
+    if isinstance(v, dict):
+        return {"mapValue": {"fields": {k: to_value(x) for k, x in v.items()}}}
+    if isinstance(v, (list, tuple)):
+        return {"arrayValue": {"values": [to_value(x) for x in v]}}
+    return {"stringValue": str(v)}
+
+
+def from_value(v):
+    kind, x = next(iter(v.items()))
+    if kind == "mapValue":
+        return {k: from_value(y) for k, y in x.get("fields", {}).items()}
+    if kind == "arrayValue":
+        return [from_value(y) for y in x.get("values", [])]
+    if kind == "integerValue":
+        return int(x)
+    if kind == "nullValue":
+        return None
+    return x
+
+
+class Store:
+    def __init__(self, session: Session):
+        self.s = session
+        self.base = f"https://firestore.googleapis.com/v1/projects/{session.project}/databases/(default)/documents"
+
+    def pending(self, limit: int = 5) -> list[dict]:
+        q = {"structuredQuery": {"from": [{"collectionId": COLLECTION}],
+                                 "where": {"fieldFilter": {"field": {"fieldPath": "status"}, "op": "EQUAL",
+                                                           "value": {"stringValue": "pending"}}},
+                                 "limit": limit}}
+        status, r = _http("POST", f"{self.base}:runQuery", q, self.s.id_token())
+        if status != 200:
+            raise RuntimeError(f"Could not list requests ({status}): {r}")
+        return [x["document"] for x in r if "document" in x]
+
+    def update(self, doc: dict, fields: dict, *, server_time: list[str] = (), if_unchanged: bool = False) -> bool:
+        write = {
+            "update": {"name": doc["name"], "fields": {k: to_value(v) for k, v in fields.items()}},
+            "updateMask": {"fieldPaths": list(fields)},   # server-time fields are set by the transforms
+            "updateTransforms": [{"fieldPath": f, "setToServerValue": "REQUEST_TIME"} for f in server_time],
+        }
+        if if_unchanged:
+            write["currentDocument"] = {"updateTime": doc["updateTime"]}
+        status, r = _http("POST", f"{self.base}:commit", {"writes": [write]}, self.s.id_token())
+        if status == 200:
+            return True
+        if if_unchanged and status in (400, 409) and "FAILED_PRECONDITION" in json.dumps(r):
+            return False  # another worker claimed it first
+        raise RuntimeError(f"Write failed ({status}): {r}")
+
+
+# ---------------------------------------------------------------------------
+# Jobs
+# ---------------------------------------------------------------------------
+
+def run_job(orl, job: dict, calibration) -> dict:
+    from openrocket import Launch
+    from simulate import run_with
+    rocket = job.get("rocket", "ederance")
+    if rocket not in ROCKETS:
+        raise ValueError(f"unknown rocket '{rocket}'")
+    w = job["weather"]
+    launch = Launch(elevation_ft=float(w["elevation_ft"]), wind_mph=float(w["wind_mph"]),
+                    humidity_pct=float(w["humidity_pct"]), temperature_f=float(w["temperature_f"]))
+    cal = calibration if calibration and calibration.get("rocket") == ROCKETS[rocket].name else None
+    result = run_with(orl, ROCKETS[rocket], launch, calibration=cal,
+                      target_apogee_ft=float(job.get("target_apogee_ft", 800)))
+    p = result["predicted"]
+    return {   # what the app shows; units in the names
+        "sim_version": result["sim_version"],
+        "calibration_id": result["calibration_id"],
+        "motor": result["rocket"]["motors"][0]["designation"] + "-" + f"{result['rocket']['motors'][0]['delay_s']:g}"
+                 if result["rocket"]["motors"] else None,
+        "liftoff_mass_g": result["rocket"]["liftoff"]["mass_g"],
+        "apogee_ft": p["apogee_ft"], "duration_s": p["duration_s"], "time_to_apogee_s": p["time_to_apogee_s"],
+        "optimum_delay_s": p["optimum_delay_s"], "max_velocity_fps": p["max_velocity_fps"],
+        "max_acceleration_g": p["max_acceleration_g"], "velocity_off_rail_fps": p["velocity_off_rail_fps"],
+        "stability_off_rail_cal": p["stability_off_rail_cal"], "min_stability_cal": p["min_stability_cal"],
+        "descent_rate_fps": p["descent_rate_fps"], "landing_distance_ft": p["landing_distance_ft"],
+        "target_apogee_ft": result["target_apogee_ft"], "score": result["score"],
+        "warnings": result["warnings"],
+    }
+
+
+def handle(store: Store, orl, calibration, doc: dict) -> None:
+    job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
+    job_id = doc["name"].rsplit("/", 1)[1]
+    if not store.update(doc, {"status": "running", "claimed_by": store.s.uid}, server_time=["started_at"],
+                        if_unchanged=True):
+        print(f"{job_id}: taken by another worker")
+        return
+    print(f"{job_id}: running {job.get('weather')}", flush=True)
+    t0 = time.time()
+    try:
+        result = run_job(orl, job, calibration)
+        store.update(doc, {"status": "done", "result": result}, server_time=["finished_at"])
+        print(f"{job_id}: done in {time.time() - t0:.1f}s — {result['apogee_ft']} ft, {result['duration_s']} s", flush=True)
+    except Exception as e:  # report every failure to the app, never leave a job "running"
+        traceback.print_exc()
+        store.update(doc, {"status": "failed", "error": f"{type(e).__name__}: {e}"[:500]},
+                     server_time=["finished_at"])
+        print(f"{job_id}: failed", flush=True)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--register", action="store_true", help="create this computer's worker account")
+    ap.add_argument("--once", action="store_true", help="handle waiting requests, then stop")
+    ap.add_argument("--interval", type=float, default=3.0, help="seconds between checks (default 3)")
+    args = ap.parse_args()
+    cfg = firebase_config()
+    if args.register:
+        register(cfg)
+        return
+    if not CONFIG.exists():
+        raise SystemExit("Not registered. Run: python sim/worker.py --register")
+
+    session = Session(cfg)
+    store = Store(session)
+    session.id_token()
+    print(f"Worker {session.uid} watching {cfg['projectId']}/{COLLECTION}", flush=True)
+
+    from openrocket import load_calibration, open_openrocket
+    calibration = load_calibration(ROOT / "data" / "calibration.json")
+    real_stdout = os.dup(1)
+    os.dup2(2, 1)  # OpenRocket logs to stdout; keep it out of the worker's log lines
+    sys.stdout = os.fdopen(real_stdout, "w", buffering=1)
+    with open_openrocket() as orl:
+        while True:
+            try:
+                for doc in store.pending():
+                    handle(store, orl, calibration, doc)
+            except RuntimeError as e:
+                print(f"error: {e}", flush=True)
+            if args.once:
+                break
+            time.sleep(args.interval)
+
+
+if __name__ == "__main__":
+    main()

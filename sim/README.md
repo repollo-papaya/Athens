@@ -10,6 +10,7 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `openrocket.py` | Starts OpenRocket with its parts catalogue connected, and sets **every** simulation option from our inputs |
 | `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
 | `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
+| `worker.py` | Runs the app's simulation requests: watches Firestore, runs OpenRocket, writes results back |
 | `motors.py` | Studies every ARC 2027 approved 29 mm motor in the design (`data/arc2027_motors.csv`); results in `data/motor_study_2027.json` |
 
 The team's design is `rockets/ederance.ork`.
@@ -52,6 +53,39 @@ python sim/validate.py --elevation-ft 3740 --fit
 records its `calibration_id`; `--no-calibration` simulates the design exactly as drawn.
 
 Only JSON goes to stdout; OpenRocket's logs go to stderr.
+
+## Running simulations from the app
+
+The app's **Simulate** buttons (on the launch-conditions page) write a request to
+Firestore (`sim_jobs`). A worker running `worker.py` on a laptop or VM picks it up,
+runs OpenRocket with the team rocket and the calibration, and writes the result back.
+The app shows it live.
+
+```
+app (browser) --request--> Firestore sim_jobs <--watch / claim / result-- worker.py (OpenRocket)
+```
+
+Set up a worker once per computer, after the Setup steps above:
+
+```bash
+python sim/worker.py --register
+```
+
+This creates the worker's own Firebase account and saves its sign-in key in
+`~/.config/athens-worker.json`. That file is private: it never goes in the repo. The
+command prints a **worker ID**. Add it to `isWorker()` in `firestore.rules` and
+publish the rules. Only listed workers can claim requests or write results, so
+nobody can fake a result.
+
+Run it:
+
+```bash
+python sim/worker.py           # keep running; checks every 3 s
+python sim/worker.py --once    # handle what is waiting, then stop
+```
+
+If nothing is running, requests wait as "Queued" and the app says no worker has
+picked them up.
 
 ## Simulation inputs are set here, not taken from the .ork
 

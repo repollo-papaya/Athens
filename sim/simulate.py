@@ -87,19 +87,28 @@ def example_ork_path(jar_path: Path) -> Path:
 
 def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, branch, jar,
         liftoff_mass_g=None, calibration=None) -> dict:
+    from openrocket import open_openrocket
+    with open_openrocket(jar) as orl:
+        return run_with(orl, ork, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
+                        target_apogee_ft=target_apogee_ft, branch=branch,
+                        liftoff_mass_g=liftoff_mass_g, calibration=calibration)
+
+
+def run_with(orl, ork: Path, launch, *, motor=None, manufacturer=None, delay_s=None,
+             target_apogee_ft=DEFAULT_TARGET_APOGEE_FT, branch=0, liftoff_mass_g=None, calibration=None) -> dict:
+    """One flight on an already-running OpenRocket (the worker keeps one open)."""
     import orlab
-    from openrocket import configure, describe_rocket, open_openrocket
+    from openrocket import configure, describe_rocket
 
     scale = calibration["chute_cd_scale"] if calibration else 1.0
-    with open_openrocket(jar) as orl:
-        doc = orl.load_doc(str(ork))
-        sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
-                        liftoff_mass_g=liftoff_mass_g, chute_cd_scale=scale)
-        orl.run_simulation(sim, randomize_seed=False)
-        s = orl.get_summary(sim, branch_number=branch)
-        T = orlab.FlightDataType
-        series = orl.get_timeseries(sim, [T.TYPE_MASS, T.TYPE_CG_LOCATION], branch_number=branch)
-        rocket = describe_rocket(orl, doc, sim)
+    doc = orl.load_doc(str(ork))
+    sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
+                    liftoff_mass_g=liftoff_mass_g, chute_cd_scale=scale)
+    orl.run_simulation(sim, randomize_seed=False)
+    s = orl.get_summary(sim, branch_number=branch)
+    T = orlab.FlightDataType
+    series = orl.get_timeseries(sim, [T.TYPE_MASS, T.TYPE_CG_LOCATION], branch_number=branch)
+    rocket = describe_rocket(orl, doc, sim)
 
     liftoff = {
         "mass_g": round(float(series[T.TYPE_MASS][0]) * 1000, 1),
