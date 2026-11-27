@@ -225,19 +225,72 @@ def design_changes(changes: dict):
         if mode == "spread" and not -300 <= mass <= 300:
             raise ValueError("added mass must be -300 to +300 g")
 
+    # Moved, added and removed parts. Ids are those of the design the app showed (before changes).
+    MOVABLE = {"MassComponent", "Parachute", "Streamer", "ShockCord"}
+    TUBES = {"BodyTube", "NoseCone", "Transition", "InnerTube", "TubeCoupler"}
+    moves = {int(k): float(v) for k, v in (changes.get("moves") or {}).items()}
+    removes = [int(x) for x in (changes.get("removes") or [])]
+    adds = list(changes.get("adds") or [])
+    if len(moves) > 30 or len(removes) > 20 or len(adds) > 8:
+        raise ValueError("too many part changes in one request")
+    for a in adds:
+        if not (0 < float(a.get("mass_g", -1)) <= 300 and 1 <= float(a.get("length_mm", 0)) <= 400
+                and 1 <= float(a.get("diameter_mm", 0)) <= 120 and str(a.get("name", "")).strip()):
+            raise ValueError("an added part needs a name, 0-300 g, 1-400 mm long and 1-120 mm wide")
+
     def prepare(rocket):
+        from openrocket import _walk
+        import jpype
+        applied.pop("tubes", None); applied.pop("moved", None); applied.pop("added", None); applied.pop("removed", None)
+        # Resolve every id against the unchanged design first.
+        targets = {cid: component_by_id(rocket, cid) for cid in {*lengths, *moves, *removes, *(int(a["parent_id"]) for a in adds)}}
+        if any(c is None for c in targets.values()):
+            raise ValueError("a part in the request does not exist in the design")
         if entry is not None:
             mount = motor_mount(rocket)
             length = max(float(mount.getLength()) * 1000, entry["length_mm"] + 5)
             set_mount_diameter(rocket, entry["diameter_mm"], length)
         for cid, mm in lengths.items():
-            c = component_by_id(rocket, cid)
-            if c is None or str(c.getClass().getSimpleName()) != "BodyTube":
+            c = targets[cid]
+            if str(c.getClass().getSimpleName()) != "BodyTube":
                 raise ValueError(f"part {cid} is not a body tube")
             applied.setdefault("tubes", []).append({
                 "diameter_mm": round(float(c.getOuterRadius()) * 2000, 1),
                 "from_mm": round(float(c.getLength()) * 1000, 1), "to_mm": mm})
             c.setLength(mm / 1000.0)
+        AxialMethod = jpype.JClass("info.openrocket.core.rocketcomponent.position.AxialMethod")
+        for cid, offset in moves.items():
+            c = targets[cid]
+            if str(c.getClass().getSimpleName()) not in MOVABLE:
+                raise ValueError(f"part {cid} cannot be moved")
+            parent_len = float(c.getParent().getLength()) * 1000
+            offset = max(0.0, min(offset, parent_len - float(c.getLength()) * 1000))
+            c.setAxialMethod(AxialMethod.TOP)
+            c.setAxialOffset(offset / 1000.0)
+            applied.setdefault("moved", []).append({"name": str(c.getName()), "offset_mm": round(offset, 1)})
+        for cid in removes:
+            c = targets[cid]
+            if str(c.getClass().getSimpleName()) not in MOVABLE:
+                raise ValueError(f"part {cid} cannot be removed")
+            applied.setdefault("removed", []).append({"name": str(c.getName()), "mass_g": round(float(c.getMass()) * 1000, 1)})
+            c.getParent().removeChild(c)
+        MassComponent = jpype.JClass("info.openrocket.core.rocketcomponent.MassComponent")
+        for a in adds:
+            parent = targets[int(a["parent_id"])]
+            if str(parent.getClass().getSimpleName()) not in TUBES:
+                raise ValueError("parts can only be added inside a tube or the nose cone")
+            item = MassComponent()
+            item.setName(str(a["name"])[:40])
+            item.setComponentMass(float(a["mass_g"]) / 1000.0)
+            item.setLength(float(a["length_mm"]) / 1000.0)
+            inner = float(parent.getInnerRadius()) if hasattr(parent, "getInnerRadius") else float(a["diameter_mm"]) / 2000
+            item.setRadius(min(float(a["diameter_mm"]) / 2000.0, inner if inner > 0 else 1.0))
+            parent.addChild(item)
+            parent_len = float(parent.getLength()) * 1000
+            offset = max(0.0, min(float(a.get("offset_mm", 0)), parent_len - float(a["length_mm"])))
+            item.setAxialMethod(AxialMethod.TOP)
+            item.setAxialOffset(offset / 1000.0)
+            applied.setdefault("added", []).append({"name": str(item.getName()), "mass_g": float(a["mass_g"]), "offset_mm": round(offset, 1)})
         if mass is not None and mode == "nose":
             add_nose_ballast(rocket, mass)
             applied["nose_ballast_g"] = mass
@@ -271,11 +324,24 @@ def run_job(orl, job: dict, calibration) -> dict:
     result = run_with(orl, ROCKETS[rocket], launch, calibration=cal,
                       target_apogee_ft=float(job.get("target_apogee_ft", 800)), **extra_args)
     p = result["predicted"]
+    sensitivity = None
+    if changes is not None:
+        # How apogee and duration respond to 10 g more (spread so the CG stays put), for suggestions.
+        plus = dict(extra_args, keep_doc=False)
+        if plus.get("liftoff_mass_g") is not None:
+            plus["liftoff_mass_g"] += 10
+        else:
+            plus["extra_mass_g"] = (plus.get("extra_mass_g") or 0) + 10
+        r10 = run_with(orl, ROCKETS[rocket], launch, calibration=cal,
+                       target_apogee_ft=float(job.get("target_apogee_ft", 800)), **plus)["predicted"]
+        sensitivity = {"apogee_ft_per_10g": round(r10["apogee_ft"] - p["apogee_ft"], 2),
+                       "duration_s_per_10g": round(r10["duration_s"] - p["duration_s"], 3)}
     design_json = None
     if changes is not None:
         from design import export
         flight = {"conditions": w, "calibration_id": result["calibration_id"], "predicted": p,
                   "score": result["score"], "target_apogee_ft": result["target_apogee_ft"]}
+        flight["sensitivity"] = sensitivity
         design = export(orl, result.pop("_doc"), flight=flight, source=f"rockets/{rocket}.ork with changes")
         design["changes"] = applied
         design_json = json.dumps(design)   # Firestore cannot hold the fin outline's nested lists

@@ -45,6 +45,10 @@ CATEGORY_TYPES = {
     "streamer": "STREAMER",
     "launch lug": "LAUNCH_LUG",
     "rail button": "RAIL_BUTTON",
+    "fins": None,            # cut from sheet stock; dimensions come from the design, material from the sheet
+    "protector": None,       # payload items: placed as mass items, weighed by the team
+    "alt.": None,
+    "altimeter": None,
 }
 
 # Design component class for each catalogue type, for the design check.
@@ -90,6 +94,13 @@ def hints_from_link(link: str) -> dict:
             hints["maker"] = maker
     if "foam" in slug.lower():
         hints["material"] = "foam"
+    # Tube sizes named in the link ("BT-70 to BT-80") give a transition's two diameters.
+    sizes = {"5": 13.8, "20": 18.7, "50": 24.8, "55": 33.7, "60": 41.6, "70": 56.3, "80": 66.0}
+    named = [sizes[n] for n in re.findall(r"\bBT\s*(\d+)\b", slug, re.I) if n in sizes]
+    if len(named) >= 2:
+        hints["diameters_mm"] = sorted(named[:2])
+    if m := re.search(r"\b(1010|1515)\b", slug):
+        hints["rail"] = m.group(1)
     return hints
 
 
@@ -107,8 +118,8 @@ def preset_info(preset, CP) -> dict:
         "description": str(get(CP.DESCRIPTION) or ""),
     }
     for key, name in ((CP.OUTER_DIAMETER, "outer_diameter_mm"), (CP.INNER_DIAMETER, "inner_diameter_mm"),
-                      (CP.AFT_OUTER_DIAMETER, "aft_diameter_mm"), (CP.LENGTH, "length_mm"),
-                      (CP.DIAMETER, "diameter_mm")):
+                      (CP.AFT_OUTER_DIAMETER, "aft_diameter_mm"), (CP.FORE_OUTER_DIAMETER, "fore_diameter_mm"),
+                      (CP.LENGTH, "length_mm"), (CP.DIAMETER, "diameter_mm"), (CP.HEIGHT, "height_mm")):
         if (v := get(key)) is not None:
             info[name] = round(float(v) * 1000, 2)
     material = get(CP.MATERIAL)
@@ -137,6 +148,8 @@ def find_in_catalogue(part: dict, db, CP) -> tuple[dict | None, list[dict], dict
     if part.get("length_in"):
         hints["length_in"] = float(part["length_in"])
     if not type_name:
+        if category in CATEGORY_TYPES:   # known, but not a catalogue part
+            return None, [], {**hints, "problem": "not a catalogue part; weigh it and add it as a mass item"}
         return None, [], {**hints, "problem": f"unknown category '{part.get('category')}'"}
 
     wanted = _norm(part.get("part_no") or part.get("name", ""))
@@ -147,10 +160,18 @@ def find_in_catalogue(part: dict, db, CP) -> tuple[dict | None, list[dict], dict
         name_match = bool(wanted) and (pn == wanted or _norm(info["part_no"]) == wanted)
         dia = info.get("outer_diameter_mm") or info.get("aft_diameter_mm") or info.get("diameter_mm")
         dia_match = "diameter_mm" in hints and dia is not None and abs(dia - hints["diameter_mm"]) <= 1.0
+        if type_name == "TRANSITION":
+            # Match the two tube sizes named in the link, in either direction.
+            ends = sorted([info.get("fore_diameter_mm") or 0, info.get("aft_diameter_mm") or 0])
+            dia_match = "diameters_mm" in hints and all(abs(a - b) <= 1.0 for a, b in zip(ends, hints["diameters_mm"]))
+        if type_name == "RAIL_BUTTON":
+            dia_match = "rail" in hints and hints["rail"] in (info["part_no"] + " " + info["description"])
         if not (name_match or dia_match):
             continue
         if hints.get("material") == "foam" and "foam" not in info["description"].lower():
             continue
+        if type_name == "TRANSITION" and "blow" in hints.get("slug", "").lower():
+            name_match = name_match or "blow" in info["description"].lower()   # blow-molded plastic
         score = 4 * name_match + 2 * dia_match
         score += 2 * (info["manufacturer"] == hints.get("maker"))
         if "length_in" in hints and "length_mm" in info:
@@ -168,12 +189,15 @@ def design_parts(orl, doc) -> list[dict]:
         kind = str(c.getClass().getSimpleName())
         item = {"type": kind, "name": str(c.getName()), "mass_g": round(float(c.getMass()) * 1000, 1)}
         for getter, key in (("getOuterRadius", "outer_diameter_mm"), ("getInnerRadius", "inner_diameter_mm"),
-                            ("getAftRadius", "aft_diameter_mm"), ("getLength", "length_mm")):
+                            ("getAftRadius", "aft_diameter_mm"), ("getForeRadius", "fore_diameter_mm"),
+                            ("getLength", "length_mm")):
             try:
                 factor = 1000 if key == "length_mm" else 2000
                 item[key] = round(float(getattr(c, getter)()) * factor, 1)
             except Exception:
                 pass
+        if kind == "RailButton":
+            item["outer_diameter_mm"] = round(float(c.getOuterDiameter()) * 1000, 1)
         try:
             item["preset"] = str(c.getPresetComponent().getPartNo()) if c.getPresetComponent() else None
         except Exception:
@@ -201,6 +225,19 @@ def check_against_design(part: dict, best: dict | None, design: list[dict], moto
     classes = DESIGN_CLASSES.get(type_name, set())
     dia = best.get("outer_diameter_mm") or best.get("aft_diameter_mm")
     same_kind = [d for d in design if d["type"] in classes]
+    if type_name == "TRANSITION":
+        ends = sorted([best.get("fore_diameter_mm") or 0, best.get("aft_diameter_mm") or 0])
+        for d in same_kind:
+            mine = sorted([d.get("fore_diameter_mm") or 0, d.get("aft_diameter_mm") or 0])
+            if all(abs(a - b) <= 1.0 for a, b in zip(ends, mine)):
+                notes.append(f"In the design as '{d['name']}' ({mine[1]} to {mine[0]} mm, {d.get('length_mm')} mm long, "
+                             f"{d['mass_g']} g in the design). The catalogue's closest part is {best['material']}; "
+                             f"if yours is a different material, keep the weighed mass.")
+                return notes
+    if type_name == "RAIL_BUTTON" and same_kind:
+        d = same_kind[0]
+        notes.append(f"In the design: {len(same_kind)} rail buttons ({d.get('outer_diameter_mm')} mm, {d['mass_g']} g each in the design).")
+        return notes
     if dia is not None:
         matches = [d for d in same_kind
                    if abs((d.get("outer_diameter_mm") or d.get("aft_diameter_mm") or -99) - dia) <= 1.0]

@@ -26,6 +26,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 SCHEMA_VERSION = 1
 ROOT = Path(__file__).resolve().parent.parent
 
+# Parts the app lets you slide along their tube, add and remove.
+MOVABLE = {"MassComponent", "Parachute", "Streamer", "ShockCord"}
+
 # Components that sit inside the airframe (drawn dashed / internal in the side view).
 INTERNAL = {"InnerTube", "TubeCoupler", "CenteringRing", "Bulkhead", "EngineBlock", "MassComponent",
             "Parachute", "Streamer", "ShockCord"}
@@ -85,6 +88,12 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
         item["calculated_mass_g"] = round(float(c.getComponentMass()) * 1000, 1)
     except Exception:
         pass
+    # Each part's own centre of gravity (absolute), so the app can recompute the rocket's CG live.
+    item["cg_x_mm"] = _mm(locations[0].x + c.getComponentCG().x)
+    item["movable"] = kind in MOVABLE
+    parent = c.getParent()
+    if parent is not None and str(parent.getClass().getSimpleName()) not in ("AxialStage", "Rocket"):
+        item["offset_in_parent_mm"] = _mm(locations[0].x - parent.getComponentLocations()[0].x)
     try:
         if c.getFinish() is not None:
             item["finish"] = str(c.getFinish().toString())
@@ -208,6 +217,7 @@ def export(orl, doc, *, flight: dict | None = None, source: str = "") -> dict:
             "length_mm": _mm(motor_len),
             "diameter_mm": _mm(motor.getDiameter()),
             "launch_mass_g": round(float(motor.getLaunchMass()) * 1000, 1),
+            "cg_x_mm": _mm(aft - motor_len / 2),
             "total_impulse_ns": round(float(motor.getTotalImpulseEstimate()), 1),
             "mount_id": ids.get(str(mount.getID())),
         })

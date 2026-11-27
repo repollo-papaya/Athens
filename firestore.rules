@@ -39,12 +39,15 @@ service cloud.firestore {
     // Design changes the app may ask a worker to try (the worker checks them again).
     function validChanges(c) {
       return c is map
-        && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm'])
+        && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm', 'moves', 'removes', 'adds'])
         && (!('motor' in c) || (c.motor is string && c.motor.size() <= 40))
         && (!('delay_s' in c) || inRange(c.delay_s, 0, 20))
         && (!('mass_g' in c) || inRange(c.mass_g, -300, 1000))
         && (!('mass_mode' in c) || c.mass_mode in ['nose', 'spread', 'total'])
-        && (!('tube_lengths_mm' in c) || (c.tube_lengths_mm is map && c.tube_lengths_mm.size() <= 6));
+        && (!('tube_lengths_mm' in c) || (c.tube_lengths_mm is map && c.tube_lengths_mm.size() <= 6))
+        && (!('moves' in c) || (c.moves is map && c.moves.size() <= 30))
+        && (!('removes' in c) || (c.removes is list && c.removes.size() <= 20))
+        && (!('adds' in c) || (c.adds is list && c.adds.size() <= 8));
     }
 
     match /launch_conditions/{conditionsId} {
