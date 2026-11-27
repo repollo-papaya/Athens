@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Firestore Connection Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: same narrow column as the home page; a five-step checklist that fills in as the test runs. */
+  :root {
+    --bg: #f5f7f9; --surface: #ffffff; --fg: #16202a; --muted: #5a6875; --line: #d9e0e6;
+    --accent: #c2410c; --accent-fg: #ffffff;
+    --ok-bg: #e7f5ec; --ok-line: #b6e0c4; --ok-fg: #1d6b3a;
+    --warn-bg: #fdf3e2; --warn-line: #f0d3a0; --warn-fg: #8a5a0b;
+    --bad-bg: #fbeaea; --bad-line: #efc0c0; --bad-fg: #9b2222;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642;
+      --accent: #fb7a3c; --accent-fg: #1a0d05;
+      --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+      --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
+      --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642;
+    --accent: #fb7a3c; --accent-fg: #1a0d05;
+    --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+    --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
+    --bad-bg: #2e1414; --bad-line: #6a2a2a; --bad-fg: #f29b9b;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 44rem; margin: 0 auto; padding-block: 3rem 4rem; display: grid; gap: 2rem; }
+  a { color: var(--accent); }
+  .back { font: 500 0.8125rem/1 var(--font-mono); text-decoration: none; }
+  .eyebrow { font: 500 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 1.25rem 0 0.75rem; }
+  h1 { font: 700 clamp(1.75rem, 5vw, 2.25rem)/1.15 var(--font-display); margin: 0 0 0.75rem; text-wrap: balance; }
+  h2 { font: 700 1.125rem/1.3 var(--font-display); margin: 0 0 0.75rem; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--muted); }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem 1.5rem; display: grid; gap: 0.75rem; }
+  .panel.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .panel ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 0.35rem; }
+  code { font: 400 0.875em/1.4 var(--font-mono); }
+
+  .run-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  .project { font: 400 0.8125rem/1.4 var(--font-mono); color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+  button {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1.1rem; border: 0; border-radius: 4px;
+    background: var(--accent); color: var(--accent-fg);
+    font: 500 0.9375rem/1 var(--font-body); cursor: pointer;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  ol.steps { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  ol.steps li {
+    display: grid; grid-template-columns: 2rem 1fr auto; gap: 0.25rem 0.75rem;
+    align-items: baseline; padding: 0.7rem 0; border-bottom: 1px solid var(--line);
+  }
+  ol.steps .n { font: 400 0.8125rem/1.6 var(--font-mono); color: var(--muted); }
+  ol.steps .t { min-width: 0; }
+  ol.steps .d { display: block; color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
+  ol.steps .d.err { color: var(--bad-fg); }
+  .pill {
+    font: 500 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.35rem 0.55rem; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap;
+  }
+  .pill.running { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-fg); }
+  .pill.passed { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-fg); }
+  .pill.failed { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-fg); }
+
+  .result { padding: 1rem 1.25rem; border-radius: 6px; border: 1px solid var(--line); font-weight: 500; }
+  .result.passed { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-fg); }
+  .result.failed { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-fg); }
+  .note { font-size: 0.875rem; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { .pill { transition: background-color 0.2s, color 0.2s; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="back" href="./">&larr; ARC Rocket Design Optimizer</a>
+    <p class="eyebrow">Firebase &middot; Cloud Firestore</p>
+    <h1>Firestore connection test</h1>
+    <p class="lede">Signs in anonymously, writes one document to <code>connection_tests</code>, reads it back, deletes it and confirms it is gone. Nothing is left in the database afterwards.</p>
+  </header>
+
+  <section id="setup" class="panel warn" hidden>
+    <h2>Firebase is not configured yet</h2>
+    <p>Fill in <code>firebase-config.js</code> in the repository with your project&rsquo;s web app settings, then reload this page. Setup steps are in <a href="https://github.com/repollo-papaya/Athens/blob/main/docs/firebase-setup.md">docs/firebase-setup.md</a>.</p>
+  </section>
+
+  <section class="panel">
+    <div class="run-row">
+      <button id="run" type="button" disabled>Run connection test</button>
+      <span class="project" id="project">Loading settings&hellip;</span>
+    </div>
+    <ol class="steps" id="steps">
+      <li data-step="auth"><span class="n">1</span><span class="t">Sign in anonymously<span class="d">Firebase Auth</span></span><span class="pill">Waiting</span></li>
+      <li data-step="write"><span class="n">2</span><span class="t">Write a test document<span class="d">connection_tests</span></span><span class="pill">Waiting</span></li>
+      <li data-step="read"><span class="n">3</span><span class="t">Read it back from the server<span class="d">Compares the message that was written</span></span><span class="pill">Waiting</span></li>
+      <li data-step="delete"><span class="n">4</span><span class="t">Delete the document</span><span class="pill">Waiting</span></li>
+      <li data-step="verify"><span class="n">5</span><span class="t">Confirm it is gone<span class="d">Also removes the temporary anonymous user</span></span><span class="pill">Waiting</span></li>
+    </ol>
+    <div id="result" class="result" hidden></div>
+  </section>
+
+  <p class="note">Each test document carries an <code>expireAt</code> time one hour ahead. If the page closes mid-test, a Firestore TTL policy on that field will clean it up (optional, see the setup doc).</p>
+</main>
+
+<script type="module">
+  import { firebaseConfig } from "./firebase-config.js";
+
+  const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+  const runBtn = document.getElementById("run");
+  const projectEl = document.getElementById("project");
+  const resultEl = document.getElementById("result");
+
+  const configured = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+  if (!configured) {
+    document.getElementById("setup").hidden = false;
+    projectEl.textContent = "No Firebase project set";
+  } else {
+    projectEl.textContent = "Project: " + firebaseConfig.projectId;
+    runBtn.disabled = false;
+  }
+
+  function setStep(name, state, detail, isError) {
+    const li = document.querySelector(`[data-step="${name}"]`);
+    const pill = li.querySelector(".pill");
+    pill.className = "pill " + state;
+    pill.textContent = { waiting: "Waiting", running: "Running", passed: "Passed", failed: "Failed" }[state];
+    if (detail !== undefined) {
+      let d = li.querySelector(".d");
+      if (!d) { d = document.createElement("span"); d.className = "d"; li.querySelector(".t").appendChild(d); }
+      d.textContent = detail;
+      d.classList.toggle("err", !!isError);
+    }
+  }
+
+  function explain(err) {
+    const code = (err && err.code) || "";
+    const msg = (err && err.message) || String(err);
+    if (code === "auth/operation-not-allowed" || code === "auth/admin-restricted-operation" || code === "auth/configuration-not-found")
+      return "Anonymous sign-in is off. Turn it on in Firebase console > Authentication > Sign-in method > Anonymous.";
+    if (code === "auth/api-key-not-valid" || code === "auth/invalid-api-key" || msg.includes("api-key-not-valid"))
+      return "The apiKey in firebase-config.js is not valid. Copy the config again from Project settings.";
+    if (code === "permission-denied")
+      return "Firestore refused the request. Publish the rules from firestore.rules in Firestore Database > Rules.";
+    if (code === "not-found" || msg.includes("does not exist"))
+      return "No Firestore database found. Create one in Firebase console > Firestore Database > Create database.";
+    if (code === "unavailable")
+      return "Could not reach Firestore. Check your connection and that the database has been created.";
+    return (code ? code + ": " : "") + msg;
+  }
+
+  let sdk;
+  async function loadSdk() {
+    if (sdk) return sdk;
+    const [app, auth, fs] = await Promise.all([
+      import(SDK + "firebase-app.js"),
+      import(SDK + "firebase-auth.js"),
+      import(SDK + "firebase-firestore.js"),
+    ]);
+    const firebaseApp = app.initializeApp(firebaseConfig);
+    sdk = { auth, fs, authInstance: auth.getAuth(firebaseApp), db: fs.getFirestore(firebaseApp) };
+    return sdk;
+  }
+
+  async function runTest() {
+    runBtn.disabled = true;
+    resultEl.hidden = true;
+    ["auth", "write", "read", "delete", "verify"].forEach(s => setStep(s, "waiting"));
+    const started = performance.now();
+    let current = "auth";
+    let user;
+    try {
+      setStep("auth", "running");
+      const { auth, fs, authInstance, db } = await loadSdk();
+      const cred = await auth.signInAnonymously(authInstance);
+      user = cred.user;
+      setStep("auth", "passed", "Signed in as anonymous user " + user.uid.slice(0, 8) + "…");
+
+      current = "write";
+      setStep("write", "running");
+      const message = "connection test " + new Date().toISOString();
+      const ref = await fs.addDoc(fs.collection(db, "connection_tests"), {
+        uid: user.uid,
+        message,
+        createdAt: fs.serverTimestamp(),
+        expireAt: fs.Timestamp.fromMillis(Date.now() + 60 * 60 * 1000),
+      });
+      setStep("write", "passed", "Wrote connection_tests/" + ref.id);
+
+      current = "read";
+      setStep("read", "running");
+      const snap = await fs.getDocFromServer(ref);
+      if (!snap.exists()) throw new Error("The document was not found right after writing it.");
+      const data = snap.data();
+      if (data.message !== message) throw new Error("Read back a different message than was written.");
+      const created = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toLocaleTimeString() : "unknown time";
+      setStep("read", "passed", "Read “" + data.message + "”, server time " + created);
+
+      current = "delete";
+      setStep("delete", "running");
+      await fs.deleteDoc(ref);
+      setStep("delete", "passed", "Deleted connection_tests/" + ref.id);
+
+      current = "verify";
+      setStep("verify", "running");
+      const gone = await fs.getDocFromServer(ref);
+      if (gone.exists()) throw new Error("The document still exists after deleting it.");
+      let cleanup = "Document no longer exists";
+      try { await user.delete(); cleanup += "; anonymous user removed"; }
+      catch { cleanup += "; anonymous user kept (harmless)"; }
+      setStep("verify", "passed", cleanup);
+
+      const ms = Math.round(performance.now() - started);
+      resultEl.className = "result passed";
+      resultEl.textContent = "Connected. Wrote, read and deleted a document in " + ms + " ms. The database is empty again.";
+    } catch (err) {
+      console.error(err);
+      setStep(current, "failed", explain(err), true);
+      resultEl.className = "result failed";
+      resultEl.textContent = "Connection test failed at step " + (["auth", "write", "read", "delete", "verify"].indexOf(current) + 1) + ". See the message above.";
+    } finally {
+      resultEl.hidden = false;
+      runBtn.disabled = !configured;
+      runBtn.textContent = "Run again";
+    }
+  }
+
+  runBtn.addEventListener("click", runTest);
+</script>
+</body>
+</html>
