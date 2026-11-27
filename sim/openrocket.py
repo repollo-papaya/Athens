@@ -128,11 +128,36 @@ def motor_configurations(rocket) -> list:
     return [fc for fc in rocket.getFlightConfigurations() if fc.getActiveMotors().size() > 0]
 
 
+def set_liftoff_mass(rocket, config, liftoff_mass_g: float) -> None:
+    """Make the rocket weigh `liftoff_mass_g` on the pad, motor included.
+
+    The difference from the design is spread so the structure's centre of gravity
+    stays where the design puts it: we know how much the built rocket weighs, not
+    where the extra grams are.
+    """
+    MassCalculator = jpype.JClass("info.openrocket.core.masscalc.MassCalculator")
+    structure = MassCalculator.calculateStructure(config)
+    motor_kg = MassCalculator.calculateMotor(config).getMass()
+    structure_kg = liftoff_mass_g / 1000.0 - motor_kg
+    if structure_kg <= 0:
+        raise SystemExit(f"Liftoff mass {liftoff_mass_g} g is less than the motor's {motor_kg * 1000:.0f} g")
+    stage = rocket.getChild(0)
+    stage.setMassOverridden(True)
+    stage.setSubcomponentsOverriddenMass(True)
+    stage.setOverrideMass(structure_kg)
+    stage.setCGOverridden(True)
+    stage.setSubcomponentsOverriddenCG(True)
+    stage.setOverrideCGX(structure.getCM().x - stage.getAxialOffset())
+
+
 def configure(orl, doc, launch: Launch, *, motor: str | None = None, manufacturer: str | None = None,
-              delay_s: float | None = None):
+              delay_s: float | None = None, liftoff_mass_g: float | None = None,
+              chute_cd_scale: float = 1.0):
     """Return a simulation of `doc`'s rocket with every option set from `launch`.
 
-    Uses the design's first motor configuration unless `motor` is given.
+    Uses the design's first motor configuration unless `motor` is given. With
+    `liftoff_mass_g`, the rocket is set to that measured pad weight. `chute_cd_scale`
+    multiplies every parachute's drag coefficient (a calibration from real flights).
     """
     rocket = doc.getRocket()
     configs = motor_configurations(rocket)
@@ -146,6 +171,14 @@ def configure(orl, doc, launch: Launch, *, motor: str | None = None, manufacture
         orl.set_motor(sim, motor, manufacturer=manufacturer, delay=delay_s)
     elif delay_s is not None:
         raise SystemExit("--delay-s needs --motor")
+    if liftoff_mass_g is not None:
+        set_liftoff_mass(rocket, rocket.getFlightConfiguration(sim.getFlightConfigurationId()), liftoff_mass_g)
+    if chute_cd_scale != 1.0:
+        for c in orl.get_all_components(rocket):
+            if str(c.getClass().getSimpleName()) == "Parachute":
+                cd = float(c.getCD())
+                c.setCDAutomatic(False)
+                c.setCD(cd * chute_cd_scale)
 
     d = launch.derived()
     o = sim.getOptions()
@@ -179,6 +212,14 @@ def configure(orl, doc, launch: Launch, *, motor: str | None = None, manufacture
     o.setMaxSimulationTime(launch.max_time_s)
     o.setRandomSeed(launch.seed)
     return sim
+
+
+def load_calibration(path) -> dict | None:
+    """Read a calibration file written by validate.py --fit, or None if there is none."""
+    import json
+    from pathlib import Path
+    path = Path(path)
+    return json.loads(path.read_text()) if path.exists() else None
 
 
 def describe_rocket(orl, doc, sim) -> dict:

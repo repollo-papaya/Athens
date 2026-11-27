@@ -40,6 +40,7 @@ DEFAULT_TARGET_APOGEE_FT = 800.0
 DURATION_WINDOW_S = (37.0, 40.0)
 
 EXAMPLE_ORK = "datafiles/examples/ARC payload rocket.ork"
+DEFAULT_CALIBRATION = Path(__file__).resolve().parent.parent / "data" / "calibration.json"
 FT_PER_M = 1 / 0.3048
 
 
@@ -84,13 +85,16 @@ def example_ork_path(jar_path: Path) -> Path:
     return out
 
 
-def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, branch, jar) -> dict:
+def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, branch, jar,
+        liftoff_mass_g=None, calibration=None) -> dict:
     import orlab
     from openrocket import configure, describe_rocket, open_openrocket
 
+    scale = calibration["chute_cd_scale"] if calibration else 1.0
     with open_openrocket(jar) as orl:
         doc = orl.load_doc(str(ork))
-        sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s)
+        sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
+                        liftoff_mass_g=liftoff_mass_g, chute_cd_scale=scale)
         orl.run_simulation(sim, randomize_seed=False)
         s = orl.get_summary(sim, branch_number=branch)
         T = orlab.FlightDataType
@@ -105,6 +109,7 @@ def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, br
     return {
         "schema_version": SCHEMA_VERSION,
         "sim_version": "openrocket-24.12",
+        "calibration_id": calibration["calibration_id"] if calibration else None,
         "rocket": {"ork_file": ork.name, **rocket, "liftoff": liftoff},
         "launch": {**asdict(launch), "derived": {k: round(v, 2) for k, v in launch.derived().items()}},
         "predicted": {
@@ -126,7 +131,8 @@ def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, br
         },
         "score": arc_score(apogee_ft, s.flight_time, target_apogee_ft),
         "target_apogee_ft": target_apogee_ft,
-        "warnings": [str(w) for w in s.warnings],
+        "warnings": [str(w) for w in s.warnings]
+                    + ([] if calibration else ["uncalibrated: no calibration applied"]),
     }
 
 
@@ -156,6 +162,11 @@ def main(argv: list[str] | None = None) -> None:
     g.add_argument("--motor", help="motor designation to fly instead of the design's, e.g. F39T")
     g.add_argument("--manufacturer", help="motor manufacturer, when several make that designation")
     g.add_argument("--delay-s", type=float, help="ejection delay to use with --motor")
+    g = p.add_argument_group("rocket as built")
+    g.add_argument("--liftoff-mass-g", type=float, help="measured pad weight, motor included (default: the design's)")
+    g.add_argument("--calibration", type=Path, default=DEFAULT_CALIBRATION,
+                   help="calibration from real flights (default data/calibration.json, written by validate.py --fit)")
+    g.add_argument("--no-calibration", action="store_true", help="simulate the design exactly as drawn")
     g = p.add_argument_group("run")
     g.add_argument("--target-apogee-ft", type=float, default=DEFAULT_TARGET_APOGEE_FT)
     g.add_argument("--seed", type=int, default=d.seed, help="random seed for wind turbulence")
@@ -183,8 +194,15 @@ def main(argv: list[str] | None = None) -> None:
             ork = example_ork_path(Path(args.jar) if args.jar else Path(orlab.fetch_jar()))
         else:
             ork = args.ork
+        from openrocket import load_calibration
+        calibration = None
+        if not args.no_calibration and not args.example:
+            calibration = load_calibration(args.calibration)
+            if calibration and calibration.get("rocket") != ork.name:
+                calibration = None  # calibrated for a different rocket
         result = run(ork, launch, motor=args.motor, manufacturer=args.manufacturer, delay_s=args.delay_s,
-                     target_apogee_ft=args.target_apogee_ft, branch=args.branch, jar=args.jar)
+                     target_apogee_ft=args.target_apogee_ft, branch=args.branch, jar=args.jar,
+                     liftoff_mass_g=args.liftoff_mass_g, calibration=calibration)
     finally:
         sys.stdout.flush()
         os.dup2(real_stdout, 1)

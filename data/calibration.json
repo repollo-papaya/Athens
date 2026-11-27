@@ -1,0 +1,37 @@
+{
+  "calibration_id": "cal_20261127",
+  "fitted_on": "2026-11-27",
+  "rocket": "ederance.ork",
+  "chute_cd_scale": 0.704,
+  "what": "multiplies every parachute's drag coefficient so simulated durations match real flights",
+  "flights": 38,
+  "assumptions": {
+    "elevation_ft": 3740.0,
+    "humidity_pct": 30.0,
+    "rail_length_ft": 6.0,
+    "motor": "design motor configuration",
+    "weight": "measured pad weight, motor included"
+  },
+  "after_fit": {
+    "apogee": {
+      "mean_error": -8.5,
+      "mean_abs_error": 32.6,
+      "rms_error": 38.0,
+      "sd_error": 37.5,
+      "mean_error_pct": -0.9,
+      "within_3_pct": 14,
+      "within_5_pct": 24,
+      "n": 38
+    },
+    "duration": {
+      "mean_error": -0.0,
+      "mean_abs_error": 4.1,
+      "rms_error": 5.1,
+      "sd_error": 5.2,
+      "mean_error_pct": 1.0,
+      "within_3_pct": 6,
+      "within_5_pct": 13,
+      "n": 38
+    }
+  }
+}

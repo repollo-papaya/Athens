@@ -504,7 +504,10 @@ OpenRocket 24.12 simulation from those conditions and prints apogee, duration an
 as JSON for the team rocket (`rockets/ederance.ork`), setting every simulation option from
 inputs rather than from the simulations saved in the file, and matching OpenRocket desktop
 within 1 ft; `sim/components.py` looks up the parts list (`data/components.csv`) in
-OpenRocket's parts catalogue and checks it against the design.
+OpenRocket's parts catalogue and checks it against the design. Against 38 real flights
+(`data/flights_2025_raw.csv`), simulated apogee is within 1% on average (±38 ft per flight)
+assuming a 3,740 ft launch site; the first calibration (`data/calibration.json`) scales
+parachute drag to 0.70 of the design's, which brings mean duration error to zero.
 
 Open questions for the team:
 
@@ -517,4 +520,7 @@ Open questions for the team:
 - [ ] Which variants can really be changed at the field (ballast positions, parachutes on hand, delay settings)?
 - [ ] What uncertainty should each measured value carry (mass, centre of gravity, motor impulse)?
 - [ ] When the rocket changes, which changes need a new calibration and which can reuse the old one?
+- [ ] What is the launch site's elevation? Validation assumes 3,740 ft (the `.ork`'s first saved simulation).
+- [ ] Does the logged weight include the motor, and which motor, delay and parachutes flew each session?
+- [ ] Add elevation, motor, delay and parachutes as columns in the flight log from now on.
 - [ ] The parts list names a BT-5 (13 mm) motor mount, but the design flies a 24 mm F39T in a 24 mm tube. Which is right?

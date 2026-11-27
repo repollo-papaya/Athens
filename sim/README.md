@@ -8,6 +8,8 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `simulate.py` | One flight of a rocket under the app's launch conditions; prints apogee, duration, stability and ARC score as JSON |
 | `components.py` | Looks up the team's parts list (`data/components.csv`) in OpenRocket's parts catalogue and checks it against a design |
 | `openrocket.py` | Starts OpenRocket with its parts catalogue connected, and sets **every** simulation option from our inputs |
+| `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
+| `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
 
 The team's design is `rockets/ederance.ork`.
 
@@ -34,9 +36,19 @@ python sim/simulate.py --ork rockets/ederance.ork --conditions conditions.json
 # Try a different motor
 python sim/simulate.py --ork rockets/ederance.ork --conditions conditions.json --motor F39T --manufacturer AeroTech --delay-s 5
 
+# The rocket as built: measured pad weight, motor included
+python sim/simulate.py --ork rockets/ederance.ork --conditions conditions.json --liftoff-mass-g 505
+
 # Parts list: catalogue specs, checked against the design
 python sim/components.py --ork rockets/ederance.ork
+
+# Compare with the real flights, and refit the calibration
+python sim/validate.py --elevation-ft 3740
+python sim/validate.py --elevation-ft 3740 --fit
 ```
+
+`simulate.py` applies `data/calibration.json` when it was fitted for the same `.ork`, and
+records its `calibration_id`; `--no-calibration` simulates the design exactly as drawn.
 
 Only JSON goes to stdout; OpenRocket's logs go to stderr.
 
@@ -79,24 +91,62 @@ The 1 ft difference is wind turbulence.
 by about 1 ft. The Monte Carlo step must therefore vary wind, temperature, motor impulse
 and mass explicitly, as the design doc already specifies, rather than rely on the seed.
 
+## Validation against real flights
+
+`data/flights_2025_raw.csv` logs 47 launches from January to May 2025. `flights.py`
+keeps 38. It sets aside the 3 January flights of a 35 in build, 2 with nothing recorded,
+3 far-low apogees (300, 536, 553 ft) and one 67 s duration. Hand-typed units are
+interpreted and noted per row (for example "502.5 ft" in the weight column is read
+as grams).
+
+Each flight is simulated with its own temperature, wind and **measured weight**. The
+design weighs 451 g, but the built rockets weighed 457–561 g, mostly about 505 g.
+`openrocket.set_liftoff_mass()` sets the pad weight, keeping the structure's centre of
+gravity where the design puts it.
+
+The log does not record launch-site elevation, humidity, rail or motor. Assumed:
+**3,740 ft** (where the `.ork`'s first saved simulation was set, near El Paso),
+30% humidity, 6 ft rail, and the design's AeroTech F39T-6.
+
+| | Apogee, sim − real | Duration, sim − real |
+|---|---|---|
+| Design as drawn, site at sea level | −51 ft (−6.5%) | +6.8 s (+17%) |
+| Design as drawn, site at 3,740 ft | **−8 ft (−0.9%)**, ±38 ft per flight | +6.8 s (+17%) |
+| Calibrated, site at 3,740 ft | **−8 ft (−0.9%)**, ±38 ft per flight; 24 of 38 within 5% | **0.0 s**, ±5.2 s per flight; 13 of 38 within 5% |
+
+What this shows:
+
+- **Apogee is right on average and follows weight.** Grouped by weight, simulated and
+  real averages agree within about 10 ft (818 vs 829 ft at 450–480 g, 777 vs 766 at
+  480–510 g, 745 vs 735 at 510–545 g). The ±38 ft per flight is close to the spread of
+  the real apogees themselves (±41 ft); motor-to-motor impulse and altimeter readings
+  are not in the log, so no model can predict them flight by flight.
+- **The parachutes deliver about 70% of the drag the design assumes.** Calibrated
+  parachute drag is 0.704 × the design's (Cd 0.56 instead of 0.80), which is common
+  for real chutes (partial opening, shroud lines, the shock cord). Descent goes from
+  about 17 to 21 ft/s.
+- **Duration error changes by launch day** (from −2 s on 5/2 to +15 s in early March),
+  and real duration barely changes with weight, which the physics says it should. That
+  points to the recovery set-up changing between sessions. Logging which parachutes
+  flew would shrink the ±5 s.
+
+**Before relying on these numbers, confirm:** the launch-site elevation, the motor and
+delay flown, whether the logged weight includes the motor, and which parachutes flew.
+
 ## The team rocket today
 
-`rockets/ederance.ork`, AeroTech F39T-6, under the conditions saved from the app
-(1,200 ft, 8.5 mph, 45%, 62 °F):
+`rockets/ederance.ork`, AeroTech F39T-6, 3,740 ft, 60 °F, 2 mph wind, 30% humidity:
 
-| Result | Value | Note |
-|---|---|---|
-| Liftoff mass | 451 g | |
-| Apogee | 784 ft | 16 ft under 800 |
-| Duration | 56.0 s | **16 s over** the 37–40 s window |
-| Score | 80.1 | 16.1 altitude + 4 × 16.0 duration |
-| Stability off the rail | 0.96 cal | **under 1.0** |
-| Minimum stability in flight | 0.71 cal | |
-| Optimum ejection delay | 5.3 s | the motor has a 6 s delay |
-| Descent rate | 16 ft/s | two parachutes (21 in and 18 in) |
+| | Design as drawn (451 g) | Calibrated, 451 g | Calibrated, as built (505 g) |
+|---|---|---|---|
+| Apogee | 826 ft | 826 ft | 764 ft |
+| Duration | 56.6 s | 48.7 s | 43.3 s |
+| Score (800 ft, 37–40 s) | 92.0 | 60.1 | 49.6 |
+| Stability off the rail | 1.29 cal | 1.23 cal | 1.35 cal |
 
-Duration costs four times as much as altitude, so the parachutes are the biggest lever.
-That is the optimizer's job (next step), not a hand fix here.
+Duration is still 3 s over the window as built, and it costs 4 points per second.
+The optimizer (next step) searches ballast, parachute and delay for the lowest
+expected score.
 
 ## The parts list
 
