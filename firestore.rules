@@ -6,6 +6,7 @@ rules_version = '2';
 //   connection_tests   temporary documents written by firebase-test.html
 //   launch_conditions  launch conditions saved by the app's first page (app/)
 //   sim_jobs           simulation requests from the app, run by a worker (sim/worker.py)
+//   design_chats       design chat requests: a worker designs, simulates and recommends (sim/designer.py)
 // Everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -39,7 +40,8 @@ service cloud.firestore {
     // Design changes the app may ask a worker to try (the worker checks them again).
     function validChanges(c) {
       return c is map
-        && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm', 'moves', 'removes', 'adds'])
+        && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm', 'moves', 'removes', 'adds',
+                             'chute_diameters_mm'])
         && (!('motor' in c) || (c.motor is string && c.motor.size() <= 40))
         && (!('delay_s' in c) || inRange(c.delay_s, 0, 20))
         && (!('mass_g' in c) || inRange(c.mass_g, -300, 1000))
@@ -47,7 +49,8 @@ service cloud.firestore {
         && (!('tube_lengths_mm' in c) || (c.tube_lengths_mm is map && c.tube_lengths_mm.size() <= 6))
         && (!('moves' in c) || (c.moves is map && c.moves.size() <= 30))
         && (!('removes' in c) || (c.removes is list && c.removes.size() <= 20))
-        && (!('adds' in c) || (c.adds is list && c.adds.size() <= 8));
+        && (!('adds' in c) || (c.adds is list && c.adds.size() <= 8))
+        && (!('chute_diameters_mm' in c) || (c.chute_diameters_mm is map && c.chute_diameters_mm.size() <= 4));
     }
 
     match /launch_conditions/{conditionsId} {
@@ -93,6 +96,39 @@ service cloud.firestore {
         && ((resource.data.status == 'pending' && request.resource.data.status == 'running'
                && request.resource.data.claimed_by == request.auth.uid)
             || (resource.data.status == 'running' && request.resource.data.status in ['done', 'failed']
+               && resource.data.claimed_by == request.auth.uid));
+    }
+
+    // Design chat. The app creates a request (status "pending"); a worker claims it ("running"),
+    // reports progress in "stage", and finishes it ("done" with a result, or "failed").
+    match /design_chats/{chatId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather', 'message'])
+        && request.resource.data.keys().hasOnly(['schema_version', 'uid', 'created_at', 'status', 'rocket', 'weather', 'message',
+                                                 'conditions_id', 'target_apogee_ft', 'previous_id'])
+        && request.resource.data.schema_version == 1
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at == request.time
+        && request.resource.data.status == 'pending'
+        && request.resource.data.rocket in ['ederance']
+        && validWeather(request.resource.data.weather)
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 1000
+        && (!('conditions_id' in request.resource.data) || (request.resource.data.conditions_id is string
+              && request.resource.data.conditions_id.size() <= 64))
+        && (!('previous_id' in request.resource.data) || (request.resource.data.previous_id is string
+              && request.resource.data.previous_id.size() <= 64))
+        && (!('target_apogee_ft' in request.resource.data) || inRange(request.resource.data.target_apogee_ft, 700, 900));
+
+      allow read: if signedIn()
+        && (resource == null || resource.data.uid == request.auth.uid || isWorker());
+
+      allow update: if isWorker()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'stage', 'claimed_by', 'started_at', 'finished_at', 'result', 'error'])
+        && ((resource.data.status == 'pending' && request.resource.data.status == 'running'
+               && request.resource.data.claimed_by == request.auth.uid)
+            || (resource.data.status == 'running' && request.resource.data.status in ['running', 'done', 'failed']
                && resource.data.claimed_by == request.auth.uid));
     }
 

@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = Path(os.environ.get("ATHENS_WORKER_CONFIG", Path.home() / ".config" / "athens-worker.json"))
 COLLECTION = "sim_jobs"
+CHAT_COLLECTION = "design_chats"   # design chat requests (sim/designer.py)
 # Rockets the app may ask for. "ederance" is the team rocket as now built: ederance.ork
 # with a 29 mm motor mount (rockets/ederance-29mm.ork, made by sim/derive.py).
 ROCKETS = {"ederance": ROOT / "rockets" / "ederance-29mm.ork"}
@@ -147,8 +148,12 @@ class Store:
         self.s = session
         self.base = f"https://firestore.googleapis.com/v1/projects/{session.project}/databases/(default)/documents"
 
-    def pending(self, limit: int = 5) -> list[dict]:
-        q = {"structuredQuery": {"from": [{"collectionId": COLLECTION}],
+    def get(self, collection: str, doc_id: str) -> dict | None:
+        status, r = _http("GET", f"{self.base}/{collection}/{doc_id}", None, self.s.id_token())
+        return r if status == 200 else None
+
+    def pending(self, limit: int = 5, collection: str = COLLECTION) -> list[dict]:
+        q = {"structuredQuery": {"from": [{"collectionId": collection}],
                                  "where": {"fieldFilter": {"field": {"fieldPath": "status"}, "op": "EQUAL",
                                                            "value": {"stringValue": "pending"}}},
                                  "limit": limit}}
@@ -228,6 +233,10 @@ def design_changes(changes: dict):
     # Moved, added and removed parts. Ids are those of the design the app showed (before changes).
     MOVABLE = {"MassComponent", "Parachute", "Streamer", "ShockCord"}
     TUBES = {"BodyTube", "NoseCone", "Transition", "InnerTube", "TubeCoupler"}
+    chutes = {int(k): float(v) for k, v in (changes.get("chute_diameters_mm") or {}).items()}
+    for v in chutes.values():
+        if not 150 <= v <= 1500:
+            raise ValueError("parachute canopy diameters must be 150-1500 mm (6-59 in)")
     moves = {int(k): float(v) for k, v in (changes.get("moves") or {}).items()}
     removes = [int(x) for x in (changes.get("removes") or [])]
     adds = list(changes.get("adds") or [])
@@ -241,9 +250,11 @@ def design_changes(changes: dict):
     def prepare(rocket):
         from openrocket import _walk
         import jpype
-        applied.pop("tubes", None); applied.pop("moved", None); applied.pop("added", None); applied.pop("removed", None)
+        for key in ("tubes", "moved", "added", "removed", "chutes"):
+            applied.pop(key, None)
         # Resolve every id against the unchanged design first.
-        targets = {cid: component_by_id(rocket, cid) for cid in {*lengths, *moves, *removes, *(int(a["parent_id"]) for a in adds)}}
+        targets = {cid: component_by_id(rocket, cid)
+                   for cid in {*lengths, *moves, *removes, *chutes, *(int(a["parent_id"]) for a in adds)}}
         if any(c is None for c in targets.values()):
             raise ValueError("a part in the request does not exist in the design")
         if entry is not None:
@@ -258,6 +269,13 @@ def design_changes(changes: dict):
                 "diameter_mm": round(float(c.getOuterRadius()) * 2000, 1),
                 "from_mm": round(float(c.getLength()) * 1000, 1), "to_mm": mm})
             c.setLength(mm / 1000.0)
+        for cid, dia in chutes.items():
+            c = targets[cid]
+            if str(c.getClass().getSimpleName()) != "Parachute":
+                raise ValueError(f"part {cid} is not a parachute")
+            applied.setdefault("chutes", []).append({"name": str(c.getName()),
+                                                     "from_mm": round(float(c.getDiameter()) * 1000, 1), "to_mm": dia})
+            c.setDiameter(dia / 1000.0)
         AxialMethod = jpype.JClass("info.openrocket.core.rocketcomponent.position.AxialMethod")
         for cid, offset in moves.items():
             c = targets[cid]
@@ -362,6 +380,41 @@ def run_job(orl, job: dict, calibration) -> dict:
     }
 
 
+def handle_chat(store: Store, orl, calibration, doc: dict) -> None:
+    from designer import run_design_chat
+    job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
+    job_id = doc["name"].rsplit("/", 1)[1]
+    if not store.update(doc, {"status": "running", "claimed_by": store.s.uid, "stage": "Starting"},
+                        server_time=["started_at"], if_unchanged=True):
+        return
+    print(f"{job_id}: design chat {job.get('message', '')[:60]!r}", flush=True)
+    # A follow-up carries the previous request's message and recommendation, from the same user only.
+    if job.get("previous_id"):
+        prev = store.get(CHAT_COLLECTION, str(job["previous_id"]))
+        if prev:
+            pf = {k: from_value(v) for k, v in prev.get("fields", {}).items()}
+            if pf.get("uid") == job.get("uid"):
+                result = pf.get("result") or {}
+                rec = None
+                idx = result.get("recommended_index")
+                if isinstance(idx, int) and idx < len(result.get("candidates", [])):
+                    c = result["candidates"][idx]
+                    rec = {"name": c.get("name"), "changes": c.get("changes"), "metrics": c.get("metrics")}
+                job["previous"] = {"message": pf.get("message", ""), "recommended": rec}
+    t0 = time.time()
+    try:
+        result = run_design_chat(orl, job, calibration, run_job,
+                                 progress=lambda stage: store.update(doc, {"stage": stage[:120]}))
+        store.update(doc, {"status": "done", "stage": "Done", "result": result}, server_time=["finished_at"])
+        print(f"{job_id}: done in {time.time() - t0:.0f}s — {len(result['candidates'])} designs", flush=True)
+    except Exception as e:
+        traceback.print_exc()
+        msg = f"{type(e).__name__}: {e}"
+        if "api_key" in msg.lower() or "authentication" in msg.lower() or "AuthenticationError" in msg:
+            msg = "The worker has no working Anthropic API key. Set ANTHROPIC_API_KEY on the worker's computer and restart it."
+        store.update(doc, {"status": "failed", "error": msg[:500]}, server_time=["finished_at"])
+
+
 def handle(store: Store, orl, calibration, doc: dict) -> None:
     job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
     job_id = doc["name"].rsplit("/", 1)[1]
@@ -410,6 +463,8 @@ def main() -> None:
             try:
                 for doc in store.pending():
                     handle(store, orl, calibration, doc)
+                for doc in store.pending(limit=2, collection=CHAT_COLLECTION):
+                    handle_chat(store, orl, calibration, doc)
             except RuntimeError as e:
                 print(f"error: {e}", flush=True)
             if args.once:

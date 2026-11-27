@@ -11,6 +11,7 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
 | `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
 | `design.py` | Exports a design (every part, CG, CP, stability, motor, predicted flight) as JSON for the app's design view (`app/design.html`) |
+| `designer.py` | Design chat: Claude proposes candidate designs, the worker simulates each, Claude recommends one |
 | `motor_menu.py` | Builds `data/motor_menu.json`, the app's motor dropdown: every ARC 2027 approved motor with its usable delays |
 | `worker.py` | Runs the app's simulation requests: watches Firestore, runs OpenRocket, writes results back |
 | `motors.py` | Studies every ARC 2027 approved 29 mm motor in the design (`data/arc2027_motors.csv`); results in `data/motor_study_2027.json` |
@@ -94,6 +95,28 @@ approved list (the mount resizes to fit it) and its delay, nose ballast, added o
 removed mass (keeping the CG) or a measured liftoff mass, and body tube lengths. The
 worker checks every change again, applies it, flies the rocket, and returns the
 redrawn design with its flight; the page shows it with the 2027 rules check.
+
+## Design chat
+
+The design page has a chat box. A message ("hit 800 ft and land in the window with
+the parts we have") goes to Firestore (`design_chats`); the worker runs `designer.py`:
+
+1. flies the rocket as it is under the chosen launch conditions (baseline);
+2. asks Claude (`claude-opus-5-5`, structured JSON output) for 3-5 candidate designs,
+   written as the same changes the builder sends: approved motor and delay, nose
+   ballast or added mass, tube lengths, parachute canopy sizes, moved, added or
+   removed parts;
+3. simulates every candidate with OpenRocket and the flight calibration, and checks
+   it against the 2027 rules (invalid ones are reported, not built);
+4. if no rule-passing design scores 20 or better, one refinement round;
+5. asks Claude to compare the simulated results and recommend one.
+
+Claude only writes data in fixed schemas; every number in the answer comes from the
+simulator. Requests use the server-side refusal fallback and prompt caching. Each
+request is 2-3 model calls.
+
+The worker needs an Anthropic API key: set `ANTHROPIC_API_KEY` on its computer (or
+log in with `ant auth login`), then restart it.
 
 ## Simulation inputs are set here, not taken from the .ork
 

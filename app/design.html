@@ -162,6 +162,45 @@
   fieldset.add input[type=text] { width: 100%; min-height: 2.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--field);
     color: var(--fg); font: 400 1rem var(--font-body); padding: 0.5rem 0.65rem; text-transform: none; letter-spacing: 0; }
   fieldset.add .grid { margin-bottom: 0.5rem; }
+  .chat { padding: 0.9rem 1rem; display: grid; gap: 0.7rem; }
+  .chat-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .chat-head h2 { margin: 0; }
+  .linkish { border: 0; background: none; color: var(--accent); font: 500 0.875rem var(--font-body); cursor: pointer; padding: 0.4rem; min-height: 2.25rem; }
+  .chat-log { display: grid; gap: 0.75rem; }
+  .chat-log:empty { display: none; }
+  .bubble { border-radius: 10px; padding: 0.65rem 0.8rem; font-size: 0.9375rem; max-width: 100%; }
+  .bubble.me { justify-self: end; background: var(--fg); color: var(--bg); max-width: 85%; }
+  .bubble.ai { background: var(--field); border: 1px solid var(--line); display: grid; gap: 0.6rem; }
+  .bubble.ai .stage { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); font-size: 0.875rem; }
+  .bubble.ai h3 { margin: 0; font: 700 1rem/1.3 var(--font-display); }
+  .bubble.ai p { margin: 0; }
+  .bubble.ai ul { margin: 0; padding-left: 1.1rem; }
+  .cands { display: grid; gap: 0.5rem; }
+  .cand { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 0.6rem 0.7rem; display: grid; gap: 0.35rem; }
+  .cand.rec { border-color: var(--ok-line); box-shadow: inset 4px 0 0 var(--ok-line); }
+  .cand .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 0.75rem; }
+  .cand .name { font-weight: 600; }
+  .cand .idea, .cand .verdict { font-size: 0.8125rem; color: var(--muted); }
+  .cand .nums { font: 400 0.8125rem/1.45 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .cand .fail { color: #c43b3b; font-size: 0.8125rem; }
+  .cand .btns { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .cand .btns button { min-height: 2.25rem; padding: 0.35rem 0.75rem; border-radius: 4px; border: 1px solid var(--accent); background: transparent;
+    color: var(--accent); font: 500 0.8125rem var(--font-body); cursor: pointer; }
+  .cand .btns button.primary { background: var(--accent); color: var(--accent-fg); }
+  .badge-rec { font: 500 0.625rem/1 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ok-fg);
+    background: var(--ok-bg); border: 1px solid var(--ok-line); border-radius: 999px; padding: 0.2rem 0.45rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chips button { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 0.45rem 0.75rem;
+    font: 400 0.8125rem var(--font-body); cursor: pointer; min-height: 2.25rem; text-align: left; }
+  .chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: end; }
+  .chat-form textarea { width: 100%; min-height: 3rem; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: var(--field);
+    color: var(--fg); font: 400 1rem/1.4 var(--font-body); padding: 0.6rem 0.7rem; }
+  .chat-form button { min-height: 3rem; padding: 0 1.1rem; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-fg);
+    font: 500 0.9375rem var(--font-body); cursor: pointer; }
+  .chat-form button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .spinner { width: 0.9rem; height: 0.9rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
   .rules, .changes { padding: 0.9rem 1rem; display: grid; gap: 0.6rem; }
   .rules h2, .changes h2 { margin: 0; }
   .rules ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.35rem; }
@@ -259,6 +298,26 @@
       <span><i style="border-color: var(--shoulder)"></i>Shoulders</span>
       <span><i style="border-color: var(--motor); border-top-width: 6px"></i>Motor</span>
     </div>
+  </section>
+
+  <section class="card chat" aria-labelledby="chat-title">
+    <div class="chat-head">
+      <h2 id="chat-title">Design chat</h2>
+      <button type="button" id="chat-new" class="linkish" hidden>New conversation</button>
+    </div>
+    <p class="note">Say what you want. It designs several versions of your rocket from the approved motors and your parts, simulates each one with your flight calibration, and recommends one. Uses the launch conditions chosen in Try changes.</p>
+    <div id="chat-log" class="chat-log" aria-live="polite"></div>
+    <div class="chips" id="chat-examples">
+      <button type="button">Hit 800 ft and land in 37–40 s with the parts we have</button>
+      <button type="button">Lightest design that is still stable</button>
+      <button type="button">Best single-use motor, no reloads</button>
+      <button type="button">What works best for Finals at 825 ft?</button>
+    </div>
+    <form id="chat-form" class="chat-form" novalidate>
+      <label for="chat-input" class="sr-only">Message</label>
+      <textarea id="chat-input" rows="2" maxlength="1000" placeholder="e.g. Hit 800 ft, land in the window, and keep 20 g of margin under 650 g"></textarea>
+      <button type="submit" id="chat-send" disabled>Send</button>
+    </form>
   </section>
 
   <section class="card rules" aria-label="2027 rules check">
@@ -669,6 +728,18 @@
       const rm = document.createElement("button"); rm.type = "button"; rm.className = "danger"; rm.textContent = "Remove part";
       rm.addEventListener("click", () => removePart(c.id));
       tools.append(lab, setBtn, rm);
+      if (c.type === "Parachute") {
+        const cl = document.createElement("label");
+        cl.append("Canopy");
+        const ci = document.createElement("input");
+        Object.assign(ci, { type: "number", step: "any", inputMode: "decimal",
+          value: Number((c.canopy_diameter_mm / U().per).toFixed(U().metric ? U().dec : 1)) });
+        ci.setAttribute("aria-label", "Canopy diameter, in " + U().len);
+        cl.append(ci, U().len);
+        const cb = document.createElement("button"); cb.type = "button"; cb.textContent = "Set canopy";
+        cb.addEventListener("click", () => { const v = Number(ci.value) * U().per; if (v >= 150 && v <= 1500) setChute(c.id, Math.round(v)); });
+        tools.append(cl, cb);
+      }
       wrap.appendChild(tools);
     }
     return wrap;
@@ -866,7 +937,7 @@
   // Ids in the draft are the base design's, so the worker can apply them.
   // =====================================================================
   let base = null, lastSim = null, lastSimSig = null, dragMoved = false;
-  const draft = { moves: {}, removes: [], adds: [] };
+  const draft = { moves: {}, removes: [], adds: [], chutes: {} };
   const NOSE_BALLAST_FRACTION = 0.55;   // where the worker puts nose ballast (openrocket.add_nose_ballast)
   const TYPICAL = { apogee_ft_per_10g: -11, duration_s_per_10g: -0.9 };   // measured on the team rocket
 
@@ -896,6 +967,7 @@
     if (Object.keys(lengths).length) changes.tube_lengths_mm = lengths;
     if (Object.keys(draft.moves).length) changes.moves = Object.fromEntries(Object.entries(draft.moves).map(([k, v]) => [k, Math.round(v * 10) / 10]));
     if (draft.removes.length) changes.removes = [...draft.removes];
+    if (Object.keys(draft.chutes).length) changes.chute_diameters_mm = { ...draft.chutes };
     if (draft.adds.length) changes.adds = draft.adds.map(a => ({ name: a.name, mass_g: a.mass_g, length_mm: a.length_mm,
       diameter_mm: a.diameter_mm, parent_id: a.parent_id, offset_mm: Math.round(a.offset_mm * 10) / 10 }));
     return changes;
@@ -912,6 +984,10 @@
       const c = d.components.find(x => String(x.id) === String(id)); if (!c) continue;
       const p = parents[c.parent]; const nx = p.x_mm + off, dx = nx - c.x_mm;
       c.x_mm = nx; c.cg_x_mm += dx; c.offset_in_parent_mm = off;
+    }
+    for (const [id, dia] of Object.entries(draft.chutes)) {
+      const c = d.components.find(x => String(x.id) === String(id));
+      if (c) { c.canopy_diameter_mm = dia; c.label = `Parachute, ${fmt(dia / 25.4, 0)} in`; }
     }
     draft.adds.forEach((a, i) => {
       const p = parents[a.parent_id];
@@ -962,7 +1038,30 @@
   }
 
   function showSimulated(d, sig) { lastSim = d; lastSimSig = sig; refresh(); }
-  function resetDraft() { draft.moves = {}; draft.removes = []; draft.adds = []; lastSim = null; lastSimSig = null; }
+  function resetDraft() { draft.moves = {}; draft.removes = []; draft.adds = []; draft.chutes = {}; lastSim = null; lastSimSig = null; }
+
+  // Load a set of changes (e.g. a design-chat candidate) into the form and the draft.
+  function loadChanges(ch, simulatedDesign) {
+    resetDraft();
+    const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; e.dispatchEvent(new Event("change")); } };
+    set("ch-motor", ch.motor || "");
+    if (ch.motor && ch.delay_s != null) set("ch-delay", String(ch.delay_s));
+    set("ch-mass-mode", ch.mass_mode || "");
+    const massInput = document.getElementById("ch-mass");
+    massInput.disabled = !ch.mass_mode;
+    massInput.value = ch.mass_mode ? ch.mass_g : "";
+    for (const input of document.querySelectorAll("#ch-tubes input")) {
+      const mm = (ch.tube_lengths_mm || {})[input.dataset.part] ?? Number(input.dataset.base);
+      input.value = Number((mm / U().per).toFixed(U().dec));
+    }
+    Object.assign(draft.moves, Object.fromEntries(Object.entries(ch.moves || {}).map(([k, v]) => [k, Number(v)])));
+    draft.removes.push(...(ch.removes || []).map(Number));
+    draft.adds.push(...(ch.adds || []).map(a => ({ ...a })));
+    Object.assign(draft.chutes, ch.chute_diameters_mm || {});
+    if (simulatedDesign) { lastSim = simulatedDesign; lastSimSig = signature(); }
+    refresh();
+  }
+  function setChute(id, mm) { draft.chutes[id] = mm; selected = id; refresh(); }
 
   // ----- dragging parts along their tube -----
   let drag = null;
@@ -1109,7 +1208,7 @@
   $("units").value = units;
   $("units").addEventListener("change", (e) => setUnits(e.target.value));
   window.designView = { show, base: null, menu: [], approvedName: (m) => approvedName(m), isApproved, unit: () => U(), len,
-    collectChanges, signature, refresh, showSimulated, resetDraft, addPart, components: () => base.components };
+    collectChanges, signature, refresh, showSimulated, resetDraft, addPart, loadChanges, alt, components: () => base.components };
   const getJson = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); });
   Promise.all([getJson(source), getJson("../data/motor_menu.json").catch(() => ({ motors: [] }))])
     .then(([d, menu]) => {
@@ -1378,6 +1477,109 @@
       setStatus("", "", "");
     });
   }
+
+  // ----- Design chat -----
+  let lastChatId = null, chatWatch = null;
+  const esc = (t) => document.createTextNode(t == null ? "" : String(t));
+  function el(tag, cls, ...kids) { const e = document.createElement(tag); if (cls) e.className = cls; for (const k of kids) e.append(k instanceof Node ? k : esc(k)); return e; }
+
+  function candidateCard(c, i, chatId) {
+    const card = el("div", "cand" + (c.recommended ? " rec" : ""));
+    const top = el("div", "top", el("span", "name", c.name));
+    if (c.recommended) top.append(el("span", "badge-rec", "Recommended"));
+    card.append(top);
+    if (c.idea) card.append(el("div", "idea", c.idea));
+    if (c.error) { card.append(el("div", "fail", "Could not be built: " + c.error)); return card; }
+    const m = c.metrics, alt = window.designView.alt;
+    card.append(el("div", "nums",
+      `${alt(m.apogee_ft)} · ${fmt(m.duration_s)} s · score ${fmt(m.score)} · ${fmt(m.liftoff_mass_g, 0)} g · ${fmt(m.stability_cal, 2)} cal · ${m.motor}`));
+    const failed = (c.rules || []).filter(r => !r.ok).map(r => r.rule);
+    if (failed.length) card.append(el("div", "fail", "Fails: " + failed.join(", ")));
+    if (c.verdict) card.append(el("div", "verdict", c.verdict));
+    const btns = el("div", "btns");
+    const show = el("button", "", "Show");
+    show.type = "button";
+    show.addEventListener("click", () => {
+      window.designView.loadChanges(c.changes, JSON.parse(c.design_json));
+      document.getElementById("title").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    const use = el("button", "primary", "Use this design");
+    use.type = "button";
+    use.addEventListener("click", () => {
+      window.designView.loadChanges(c.changes, JSON.parse(c.design_json));
+      setStatus("done", "Loaded", `Loaded "${c.name}" into Try changes. Adjust it, move parts, or simulate again.`);
+      document.getElementById("changes").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    btns.append(show, use);
+    card.append(btns);
+    return card;
+  }
+
+  function renderAnswer(box, job, chatId) {
+    box.replaceChildren();
+    if (job.status === "failed") { box.append(el("p", "fail", job.error || "Something went wrong.")); return; }
+    if (job.status !== "done") {
+      const st = el("div", "stage", el("span", "spinner"), job.status === "pending" ? "Waiting for the simulation worker…" : (job.stage || "Working…"));
+      box.append(st);
+      return;
+    }
+    const r = job.result || {};
+    if (r.headline) box.append(el("h3", "", r.headline));
+    if (r.understanding) box.append(el("p", "note", "You asked: " + r.understanding));
+    if (r.explanation) box.append(el("p", "", r.explanation));
+    const b = r.baseline && r.baseline.metrics;
+    if (b) box.append(el("p", "note", `For comparison, your rocket as it is: ${window.designView.alt(b.apogee_ft)}, ${fmt(b.duration_s)} s, score ${fmt(b.score)}.`));
+    const list = el("div", "cands");
+    (r.candidates || []).forEach((c, i) => list.append(candidateCard(c, i, chatId)));
+    box.append(list);
+    if ((r.next_steps || []).length) {
+      const ul = el("ul");
+      for (const n of r.next_steps) ul.append(el("li", "", n));
+      box.append(el("div", "", el("strong", "", "Next steps")), ul);
+    }
+    if ((r.assumptions || []).length) box.append(el("p", "note", "Assumed: " + r.assumptions.join(" · ")));
+    box.append(el("p", "note", `${(r.candidates || []).length} designs simulated in ${fmt(r.seconds, 0)} s${r.refined ? ", with one refinement round" : ""}. Every number comes from OpenRocket with your flight calibration.`));
+  }
+
+  async function sendChat(text) {
+    text = text.trim();
+    if (!text || !user) return;
+    const pick = $("ch-conditions").value;
+    const c = conditions.find(x => x.id === pick);
+    const weather = c ? { ...c.weather } : { ...STANDARD };
+    $("chat-log").append(el("div", "bubble me", text));
+    const box = el("div", "bubble ai");
+    $("chat-log").append(box);
+    renderAnswer(box, { status: "pending" });
+    $("chat-input").value = "";
+    $("chat-send").disabled = true;
+    $("chat-new").hidden = false;
+    try {
+      const ref = await addDoc(collection(db, "design_chats"), {
+        schema_version: 1, uid: user.uid, created_at: serverTimestamp(), status: "pending", rocket: "ederance",
+        weather, message: text.slice(0, 1000), target_apogee_ft: 800,
+        ...(c ? { conditions_id: c.id } : {}), ...(lastChatId ? { previous_id: lastChatId } : {}),
+      });
+      if (chatWatch) chatWatch();
+      chatWatch = onSnapshot(ref, (snap) => {
+        const job = snap.data(); if (!job) return;
+        renderAnswer(box, job, ref.id);
+        if (job.status === "done" || job.status === "failed") {
+          $("chat-send").disabled = false;
+          if (job.status === "done") lastChatId = ref.id;
+        }
+      }, (err) => { box.replaceChildren(el("p", "fail", err.message)); $("chat-send").disabled = false; });
+    } catch (err) {
+      box.replaceChildren(el("p", "fail", err.code === "permission-denied"
+        ? "The database refused the request. Publish the latest firestore.rules (they now allow the design chat)." : err.message));
+      $("chat-send").disabled = false;
+    }
+  }
+  $("chat-form").addEventListener("submit", (e) => { e.preventDefault(); sendChat($("chat-input").value); });
+  $("chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendChat($("chat-input").value); } });
+  document.querySelectorAll("#chat-examples button").forEach(b => b.addEventListener("click", () => { $("chat-input").value = b.textContent; $("chat-input").focus(); }));
+  $("chat-new").addEventListener("click", () => { lastChatId = null; if (chatWatch) chatWatch(); $("chat-log").replaceChildren(); $("chat-new").hidden = true; });
+
   addEventListener("units-changed", (e) => {
     const { from, to } = e.detail;
     const typed = [...document.querySelectorAll("#ch-tubes input")].map(i => [i.dataset.part, Number(i.value) * from.per]);
@@ -1399,6 +1601,7 @@
     user = u;
     await loadConditions();
     $("ch-run").disabled = false;
+    $("chat-send").disabled = false;
   });
   signInAnonymously(auth).catch((err) => setStatus("failed", "Offline", "Could not sign in: " + (err.code || err.message)));
 </script>
