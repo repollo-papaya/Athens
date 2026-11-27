@@ -1,0 +1,72 @@
+designation,manufacturer,delays_s,withdrawn_delays_s,diameter_mm,length_mm,propellant_g,total_impulse_ns,reloadable,status,note
+1/2A3,Estes,2T;4T,,13,45,2.0,1.25,no,approved,
+A3,Estes,2;4;6T,,13,45,3.3,2.50,no,approved,
+A10,Estes,0T,,13,45,3.6,1.88,no,approved,
+A10,Estes,3T;PT,,13,45,3.8,2.50,no,approved,
+C6,Estes,0;3;5;7,,18,70,10.8,9.0,no,approved,
+C11,Estes,0;3;5;7,,24,70,12.0,9.0,no,approved,
+C12,QJet/AT,4;6,8,18,70,10.4,9.8,no,approved,
+C18W,QJet/AT,4;6;8,,18,70,5.6,9.8,no,approved,
+D8,QJet/AT,0;3;5,,24,70,22.0,18.6,no,approved,
+D9W,Aerotech,4;7,,24,70,10.1,20.0,yes,withdrawn,no longer in production
+D12,Estes,0;3;5;7,,24,70,21.1,17.0,no,approved,
+D13W,Aerotech,4;7;10,,18,70,9.8,20.0,yes,withdrawn,no longer in production
+D15T,Aerotech,4;7,,24,70,8.9,20.0,yes,withdrawn,no longer in production
+D16,QJet/AT,4;6;8,,18,79,12.5,12.4,no,withdrawn,no longer in production
+D20W,QJet/AT,4;6;8,,18,70,8.7,13.8,no,withdrawn,no longer in production
+D22W,QJet/AT,4;7,10,24,87,12.0,19.3,no,approved,
+D24T,Aerotech,4;7;10,,18,70,8.8,18.5,yes,withdrawn,no longer in production
+E12,Estes,0;4;6;8,,24,95,35.9,27.2,no,withdrawn,no longer in production
+E16,Estes,0;4;6;8,,29,114,40.0,33.4,no,approved,
+E16W,Aerotech,4;7,,29,124,19.0,40.0,yes,approved,
+E18W,Aerotech,4;8,,24,70,20.7,39.0,yes,withdrawn,no longer in production
+E20W,Aerotech,4;7,,24,65,16.2,35.0,no,approved,
+E22SS,Cesaroni,13A,,24,69,13.4,24.2,yes,approved,adjustable delay
+E23T,Aerotech,5;8,,29,124,17.4,37.0,yes,approved,
+E24C,Aerotech,4;7;10,,29,110,18.4,36.3,no,approved,
+E26W,QJet/AT,4;7;10,,24,70,18.3,27.8,no,approved,
+E28T,Aerotech,4;7,,24,70,18.4,40.0,yes,withdrawn,no longer in production
+E30T,Aerotech,4;7,,24,70,17.8,33.6,no,approved,
+E30,Estes,4;7,,24,70,17.8,33.6,no,approved,
+E31WT,Cesaroni,15A,,24,69,11.2,26.1,yes,approved,adjustable delay
+E35W,QJet/AT,5;8;11,,24,113,25.4,39.4,no,approved,
+E75VM,Cesaroni,17A,,24,69,10.4,24.8,yes,approved,adjustable delay
+F15,Estes,0;4;6;8,,29,114,60.0,49.6,no,approved,
+F20W,Aerotech,4;7,,29,73,30.0,51.8,no,approved,
+F22J,Aerotech,5;7,,29,124,46.3,65.0,yes,withdrawn,no longer in production
+F23FJ,Aerotech,4;7,,29,83,30.0,41.2,no,withdrawn,no longer in production
+F24W,Aerotech,4;7,,24,70,19.0,50.0,yes,withdrawn,no longer in production
+F25W,Aerotech,4;6,9,29,98,35.6,80.0,no,approved,
+F26FJ,Aerotech,6,9,29,98,43.1,62.2,no,approved,
+F26FJ,Estes,6,,29,98,43.1,62.2,no,approved,
+F27R,Aerotech,4;8,,29,83,28.4,49.6,no,approved,
+F29,Cesaroni,12A,,29,98,30.9,54.8,yes,approved,adjustable delay
+F30FJ,Aerotech,4;6;8,,24,90,31.2,47.0,no,approved,
+F30WH/LB,Cesaroni,6A,,24,133,40.0,73.1,yes,approved,adjustable delay
+F31CL,Cesaroni,12A,,29,98,25.7,55.5,yes,approved,adjustable delay
+F32T,Aerotech,4;6;8,,24,90,25.8,56.9,no,approved,
+F32WH,Cesaroni,12A,,29,98,29.9,52.8,yes,approved,adjustable delay
+F35W,Aerotech,5;8;11,,24,95,30.0,57.1,yes,approved,
+F36SS,Cesaroni,11A,,29,98,29.5,41.2,yes,approved,adjustable delay
+F36BS,Cesaroni,14A,,29,98,25.6,51.5,yes,approved,adjustable delay
+F37W,Aerotech,6;10;14,,29,99,28.2,50.0,yes,approved,
+F39T,Aerotech,3;6;9,,24,70,22.7,50.0,yes,withdrawn,no longer in production (reloadable casing)
+F40W,Aerotech,4;7;10,,29,124,40.0,80.0,yes,approved,
+F41W,QJet/AT,5;8;11,,24,114,30.0,45.5,no,approved,
+F42T,Aerotech,4;8,,29,83,27.0,52.9,no,approved,
+F44W,Aerotech,4;8,,24,70,19.7,41.5,no,approved,motors made before August 2024 not recommended (reliability issues since corrected)
+F50T,Aerotech,4;6,9,29,98,37.9,80.0,no,approved,
+F50T,Estes,4;6,,29,98,37.9,80.0,no,approved,
+F51BS,Cesaroni,13A,,24,101,22.0,49.9,yes,approved,adjustable delay
+F51CL,Cesaroni,12A,,24,133,33.0,75.0,yes,approved,adjustable delay
+F51NT,Aerotech,10,,24,70,26.5,55.1,yes,approved,
+F52C,Aerotech,5;8,12,29,112,30.0,66.2,no,approved,
+F52T,Aerotech,6;8;11,,29,124,36.6,78.0,yes,approved,
+F59WT,Cesaroni,12A,,29,98,26.1,57.0,yes,approved,adjustable delay
+F62T,Aerotech,S;M;L,,29,89,30.5,51.0,yes,approved,delay set S/M/L
+F62FJ,Aerotech,10,,24,95,32.2,47.6,yes,withdrawn,no longer in production
+F63R,Aerotech,10,,24,95,27.6,49.5,yes,approved,
+F67C,Aerotech,6;9,14,29,112,36.8,77.5,no,approved,
+F67W,Aerotech,4;6;9,,29,89,30.0,61.1,no,approved,
+F70WT,Cesaroni,14A,,24,101,22.5,52.9,yes,approved,adjustable delay
+F79SS,Cesaroni,13A,,24,133,40.1,67.8,yes,approved,adjustable delay

@@ -246,3 +246,84 @@ def describe_rocket(orl, doc, sim) -> dict:
             "diameter_mm": round(float(mot.getDiameter()) * 1000),
         })
     return {"parts": parts, "motors": motors}
+
+
+# ---------------------------------------------------------------------------
+# Design changes used by the motor study
+# ---------------------------------------------------------------------------
+
+def motor_mount(rocket):
+    """The design's motor-mount tube."""
+    for c in _walk(rocket):
+        if str(c.getClass().getSimpleName()) == "InnerTube" and c.isMotorMount():
+            return c
+    raise SystemExit("The design has no motor mount")
+
+
+def _walk(component):
+    yield component
+    for child in component.getChildren():
+        yield from _walk(child)
+
+
+def set_mount_diameter(rocket, motor_diameter_mm: float, length_mm: float | None = None,
+                       wall_mm: float = 0.8) -> None:
+    """Resize the motor-mount tube for a motor diameter (29 mm -> 29.1 mm inside, 30.7 mm outside).
+
+    Centering rings follow: their inner diameter is set to the new tube's outside.
+    """
+    mount = motor_mount(rocket)
+    inner_m = (motor_diameter_mm + 0.1) / 1000
+    mount.setOuterRadius(inner_m / 2 + wall_mm / 1000)
+    mount.setThickness(wall_mm / 1000)
+    if length_mm:
+        mount.setLength(length_mm / 1000)
+    for c in _walk(rocket):
+        if str(c.getClass().getSimpleName()) == "CenteringRing":
+            c.setInnerRadiusAutomatic(False)
+            c.setInnerRadius(float(mount.getOuterRadius()))
+
+
+def add_nose_ballast(rocket, grams: float) -> None:
+    """Put `grams` of ballast in the nose cone (moves the CG forward, so stability goes up)."""
+    MassComponent = jpype.JClass("info.openrocket.core.rocketcomponent.MassComponent")
+    nose = next(c for c in _walk(rocket) if str(c.getClass().getSimpleName()) == "NoseCone")
+    ballast = next((c for c in nose.getChildren() if str(c.getName()) == "Ballast"), None)
+    if ballast is None:
+        ballast = MassComponent()
+        ballast.setName("Ballast")
+        ballast.setLength(0.02)
+        ballast.setRadius(0.02)
+        nose.addChild(ballast)
+        # Sit it at the nose cone's base, where clay or weights usually go.
+        ballast.setAxialOffset(float(nose.getLength()) * 0.55)
+    ballast.setComponentMass(grams / 1000.0)
+
+
+def thrust_scale_listener(scale: float):
+    """A listener that multiplies thrust by `scale` (match NAR-tested impulse, or vary it)."""
+    class ThrustScale(orlab.AbstractSimulationListener):
+        def postSimpleThrustCalculation(self, status, thrust):
+            return float(thrust) * scale
+    return ThrustScale()
+
+
+def find_motor(designation: str, manufacturer_hint: str, nar_impulse_ns: float, diameter_mm: float):
+    """The database motor matching an approved-list entry, closest to NAR's tested impulse."""
+    import re
+    db = jpype.JClass("info.openrocket.core.startup.Application").getMotorSetDatabase()
+    want = designation.upper().replace("/", "")
+    best = None
+    for ms in db.getMotorSets():
+        des = str(ms.getDesignation()).upper().replace("/", "")
+        core = re.sub(r"^\d+", "", des).split("-")[0]           # Cesaroni "55F29-12A" -> "F29"
+        core = re.sub(r"L$", "", core) if core.endswith("L") and core[:-1] == want else core  # "F20WL" -> "F20W"
+        if core != want and des != want:
+            continue
+        for m in ms.getMotors():
+            if abs(float(m.getDiameter()) * 1000 - diameter_mm) > 1:
+                continue
+            gap = abs(float(m.getTotalImpulseEstimate()) - nar_impulse_ns)
+            if best is None or gap < best[0]:
+                best = (gap, m)
+    return best[1] if best else None
