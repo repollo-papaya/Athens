@@ -10,6 +10,7 @@ Python tools that drive **OpenRocket 24.12** headless through
 | `openrocket.py` | Starts OpenRocket with its parts catalogue connected, and sets **every** simulation option from our inputs |
 | `flights.py` | Parses the team's flight log (`data/flights_2025_raw.csv`), flagging every assumption |
 | `validate.py` | Simulates each real flight and compares; `--fit` writes the calibration (`data/calibration.json`) |
+| `design.py` | Exports a design (every part, CG, CP, stability, motor, predicted flight) as JSON for the app's design view (`app/design.html`) |
 | `worker.py` | Runs the app's simulation requests: watches Firestore, runs OpenRocket, writes results back |
 | `motors.py` | Studies every ARC 2027 approved 29 mm motor in the design (`data/arc2027_motors.csv`); results in `data/motor_study_2027.json` |
 

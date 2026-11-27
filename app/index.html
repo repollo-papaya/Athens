@@ -53,6 +53,10 @@
   .appbar { border-bottom: 1px solid var(--line); background: var(--surface); }
   .appbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.75rem; }
   .brand { font: 700 1rem/1 var(--font-display); color: var(--fg); text-decoration: none; }
+  .appnav { display: flex; align-items: center; gap: 1rem; font-size: 0.875rem; }
+  .appnav a { color: var(--muted); text-decoration: none; }
+  .appnav a[aria-current="page"] { color: var(--fg); font-weight: 500; }
+  @media (max-width: 520px) { .appnav .who { display: none; } }
   .who { font: 400 0.75rem/1.3 var(--font-mono); color: var(--muted); text-align: right; min-width: 0; overflow-wrap: anywhere; }
 
   main.wrap { padding-block: 2rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
@@ -153,7 +157,11 @@
 <header class="appbar">
   <div class="wrap">
     <a class="brand" href="../">ARC Rocket Design Optimizer</a>
-    <span class="who" id="who">Connecting&hellip;</span>
+    <nav aria-label="App" class="appnav">
+      <a href="./" aria-current="page">Conditions</a>
+      <a href="design.html">Design</a>
+      <span class="who" id="who">Connecting&hellip;</span>
+    </nav>
   </div>
 </header>
 

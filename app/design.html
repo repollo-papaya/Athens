@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rocket Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: app bar; summary readouts; an OpenRocket-style side view (ruler, outline, dashed internals, CG/CP) that zooms and scrolls on its own; predicted flight; parts table linked to the drawing. */
+  :root {
+    --bg: #f5f7f9; --surface: #ffffff; --fg: #16202a; --muted: #5a6875; --line: #d9e0e6; --field: #f9fafb;
+    --accent: #c2410c; --accent-fg: #ffffff;
+    --ok-bg: #e7f5ec; --ok-line: #b6e0c4; --ok-fg: #1d6b3a;
+    --warn-bg: #fdf3e2; --warn-line: #f0d3a0; --warn-fg: #8a5a0b;
+    --airframe: #2f4fd8; --internal: #3b4652; --chute: #d23b3b; --shoulder: #b2318f;
+    --fin-fill: rgba(47, 79, 216, 0.06); --motor: #8b939c; --hl: #c2410c; --hl-fill: rgba(194, 65, 12, 0.12);
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642; --field: #121a22;
+      --accent: #fb7a3c; --accent-fg: #1a0d05;
+      --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+      --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
+      --airframe: #8ea6ff; --internal: #aab6c2; --chute: #ff7a7a; --shoulder: #e48ad0;
+      --fin-fill: rgba(142, 166, 255, 0.08); --motor: #6b747d; --hl: #fb7a3c; --hl-fill: rgba(251, 122, 60, 0.16);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1; --line: #2a3642; --field: #121a22;
+    --accent: #fb7a3c; --accent-fg: #1a0d05;
+    --ok-bg: #12291c; --ok-line: #24573a; --ok-fg: #8fd9a8;
+    --warn-bg: #2c2110; --warn-line: #5c4216; --warn-fg: #f2c879;
+    --airframe: #8ea6ff; --internal: #aab6c2; --chute: #ff7a7a; --shoulder: #e48ad0;
+    --fin-fill: rgba(142, 166, 255, 0.08); --motor: #6b747d; --hl: #fb7a3c; --hl-fill: rgba(251, 122, 60, 0.16);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 var(--font-body); }
+  .wrap { max-width: 64rem; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .appbar { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .appbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.75rem; }
+  .brand { font: 700 1rem/1 var(--font-display); color: var(--fg); text-decoration: none; }
+  nav { display: flex; gap: 1rem; font-size: 0.875rem; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a[aria-current="page"] { color: var(--fg); font-weight: 500; }
+
+  main.wrap { padding-block: 1.75rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  main.wrap > * { min-width: 0; }
+  .eyebrow { font: 500 0.75rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.6rem; }
+  h1 { font: 700 clamp(1.6rem, 5vw, 2.1rem)/1.15 var(--font-display); margin: 0 0 0.4rem; }
+  h2 { font: 700 1.0625rem/1.3 var(--font-display); margin: 0 0 0.75rem; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--muted); font-size: 0.9375rem; }
+  code { font: 400 0.875em var(--font-mono); }
+
+  .readouts { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; }
+  .readouts div { padding: 0.7rem 0.9rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; min-width: 0; }
+  .readouts dt { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .readouts dd { margin: 0.3rem 0 0; font: 500 1.125rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .readouts dd small { display: block; font: 400 0.75rem/1.3 var(--font-body); color: var(--muted); margin-top: 0.15rem; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem;
+    padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
+  .zoom { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .zoom button { border: 0; background: transparent; color: var(--fg); font: 500 0.8125rem/1 var(--font-mono);
+    padding: 0.55rem 0.8rem; min-height: 2.25rem; cursor: pointer; }
+  .zoom button + button { border-left: 1px solid var(--line); }
+  .zoom button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+  .toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; padding: 0.55rem 0.75rem; border-top: 1px solid var(--line);
+    font-size: 0.75rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .legend i { display: inline-block; width: 1.1rem; height: 0; border-top: 2px solid; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+  svg.rocket { display: block; height: auto; }
+  svg.rocket text { font-family: var(--font-mono); fill: var(--muted); }
+  .detail { padding: 0.6rem 0.75rem; border-top: 1px solid var(--line); font-size: 0.875rem; min-height: 2.6rem; }
+  .detail strong { font-weight: 600; }
+
+  [data-id] { cursor: pointer; }
+  .hl { stroke: var(--hl) !important; stroke-width: 2.4 !important; }
+  .hl.fillable { fill: var(--hl-fill) !important; }
+
+  .flight dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.5rem; padding: 0.75rem; }
+  .flight dl div { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.65rem; }
+  .flight dl div.good { border-color: var(--ok-line); background: var(--ok-bg); }
+  .flight dl div.off { border-color: var(--warn-line); background: var(--warn-bg); }
+  .flight dt { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .flight dd { margin: 0.25rem 0 0; font: 500 1.0625rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+  .flight dd small { display: block; font: 400 0.75rem/1.3 var(--font-body); color: var(--muted); }
+  .flight .head { padding: 0.75rem 0.75rem 0; font-size: 0.875rem; color: var(--muted); }
+
+  .table-wrap { position: relative; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+  th, td { text-align: right; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  th { font: 500 0.6875rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+  th:first-child, td:first-child { text-align: left; }
+  td { font-family: var(--font-mono); }
+  td:first-child { font-family: var(--font-body); }
+  td .kind { color: var(--muted); font-size: 0.75rem; display: block; }
+  tr.sel td { background: var(--hl-fill); }
+  tbody tr { cursor: pointer; }
+  .badge { font: 500 0.625rem/1 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ok-fg);
+    border: 1px solid var(--ok-line); background: var(--ok-bg); border-radius: 999px; padding: 0.15rem 0.35rem; margin-left: 0.3rem; vertical-align: 1px; }
+  .note { font-size: 0.8125rem; color: var(--muted); }
+  td .facts { display: none; }
+  @media (max-width: 640px) {
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* Phone: one column per part, with its numbers on a second line. */
+    #parts td:not(:first-child), thead th:not(:first-child) { display: none; }
+    #parts td:first-child { white-space: normal; }
+    td .facts { display: block; font: 400 0.75rem/1.4 var(--font-mono); color: var(--muted); margin-top: 0.15rem; }
+  }
+  .err { padding: 1rem; color: var(--warn-fg); }
+  button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="wrap">
+    <a class="brand" href="../">ARC Rocket Design Optimizer</a>
+    <nav aria-label="App">
+      <a href="./">Conditions</a>
+      <a href="design.html" aria-current="page">Design</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <p class="eyebrow">Rocket design</p>
+    <h1 id="title">Loading design…</h1>
+    <p class="lede" id="subtitle"></p>
+  </section>
+
+  <dl class="readouts" id="readouts"></dl>
+
+  <section class="card" aria-label="Side view">
+    <div class="toolbar">
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button type="button" data-zoom="1" aria-pressed="true">Fit</button>
+        <button type="button" data-zoom="2" aria-pressed="false">2×</button>
+        <button type="button" data-zoom="4" aria-pressed="false">4×</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="show-cgcp" checked> Show CG / CP</label>
+    </div>
+    <div class="scroll" id="scroll"><svg class="rocket" id="svg" role="img" aria-label="Side view of the rocket"></svg></div>
+    <div class="detail" id="detail">Tap a part to see its details.</div>
+    <div class="legend" aria-hidden="true">
+      <span><i style="border-color: var(--airframe)"></i>Airframe and fins</span>
+      <span><i style="border-color: var(--internal); border-top-style: dashed"></i>Inside parts</span>
+      <span><i style="border-color: var(--chute); border-top-style: dashed"></i>Parachutes</span>
+      <span><i style="border-color: var(--shoulder)"></i>Shoulders</span>
+      <span><i style="border-color: var(--motor); border-top-width: 6px"></i>Motor</span>
+    </div>
+  </section>
+
+  <section class="card flight" id="flight" hidden aria-label="Predicted flight"></section>
+
+  <section>
+    <h2>Parts</h2>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Part</th><th>Starts at</th><th>Length</th><th>Diameter</th><th>Mass</th></tr></thead>
+        <tbody id="parts"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:0.6rem">Positions from the nose tip. <span class="badge">weighed</span> marks a mass entered by hand in the design instead of computed from the material.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const params = new URLSearchParams(location.search);
+  const source = params.get("design") || "../designs/ederance.json";
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d = 1) => (n == null || isNaN(n) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }));
+  const cm = (mm, d = 1) => fmt(mm / 10, d) + " cm";
+
+  const TYPE = {
+    NoseCone: "Nose cone", BodyTube: "Body tube", Transition: "Transition", InnerTube: "Inner tube",
+    TubeCoupler: "Coupler", CenteringRing: "Centering ring", Bulkhead: "Bulkhead", EngineBlock: "Engine block",
+    MassComponent: "Mass", Parachute: "Parachute", Streamer: "Streamer", ShockCord: "Shock cord",
+    TrapezoidFinSet: "Fins", EllipticalFinSet: "Fins", FreeformFinSet: "Fins", TubeFinSet: "Tube fins",
+    RailButton: "Rail button", LaunchLug: "Launch lug",
+  };
+
+  // Nose cone and transition profiles: the same formulas OpenRocket uses (Transition.Shape).
+  function shapeRadius(shape, x, R, L, p) {
+    if (x <= 0) return 0;
+    if (x >= L) return R;
+    switch (shape) {
+      case "CONICAL": return R * x / L;
+      case "ELLIPSOID": { const xs = x * R / L; return Math.sqrt(Math.max(0, 2 * R * xs - xs * xs)); }
+      case "POWER": return p <= 1e-5 ? R : R * Math.pow(x / L, p);
+      case "PARABOLIC": { const t = x / L; return R * (2 * t - p * t * t) / (2 - p); }
+      case "HAACK": { const th = Math.acos(1 - 2 * x / L); return R * Math.sqrt(Math.max(0, (th - Math.sin(2 * th) / 2 + p * Math.pow(Math.sin(th), 3)) / Math.PI)); }
+      case "OGIVE": {
+        if (p < 0.001) return R * x / L;
+        const rho = Math.sqrt((L * L + R * R) * (Math.pow((2 - p) * L, 2) + Math.pow(p * R, 2)) / (4 * Math.pow(p * R, 2)));
+        const l = L / p, y0 = Math.sqrt(Math.max(0, rho * rho - l * l));
+        return Math.sqrt(Math.max(0, rho * rho - (l - x) * (l - x))) - y0;
+      }
+      default: return R * x / L;
+    }
+  }
+  function profileRadius(c, x) {
+    const L = c.length_mm, fore = c.fore_radius_mm, aft = c.aft_radius_mm, p = c.shape_param;
+    return fore <= aft ? fore + shapeRadius(c.shape, x, aft - fore, L, p)
+                       : aft + shapeRadius(c.shape, L - x, fore - aft, L, p);
+  }
+
+  function el(name, attrs, parent) {
+    const e = document.createElementNS(SVGNS, name);
+    for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  let design, byId = {}, selected = null, zoom = 1;
+
+  function draw() {
+    const svg = $("svg");
+    svg.replaceChildren();
+    const comps = design.components;
+    const S = design.summary;
+    const fins = comps.filter(c => c.type.endsWith("FinSet"));
+    const maxR = S.max_diameter_mm / 2;
+    const finReach = Math.max(0, ...fins.map(f => Math.max(...f.points_mm.map(p => p[1])) + (f.body_radius_mm || 0)));
+    const halfH = Math.max(maxR, finReach) + 14;
+    const length = Math.max(S.length_mm, ...design.motors.map(m => m.x_mm + m.length_mm));
+    const padX = 14, rulerH = 26;
+    const vbX = -padX, vbW = length + 2 * padX, vbY = -halfH - rulerH, vbH = 2 * halfH + rulerH + 6;
+    svg.setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
+    const box = $("scroll").clientWidth || 360;
+    svg.setAttribute("width", Math.round(box * zoom));
+    const px = vbW / (box * zoom);              // millimetres per screen pixel
+    const sw = (n) => (n * px).toFixed(3);       // stroke widths in screen pixels
+
+    // Ruler in centimetres.
+    const ruler = el("g", { "aria-hidden": "true" }, svg);
+    const ry = -halfH - 8;
+    el("line", { x1: 0, y1: ry, x2: length, y2: ry, stroke: "var(--muted)", "stroke-width": sw(1) }, ruler);
+    const labelEvery = zoom >= 4 ? 10 : zoom >= 2 ? 50 : 100;
+    for (let x = 0; x <= length + 0.1; x += 10) {
+      const major = x % 50 === 0;
+      el("line", { x1: x, y1: ry, x2: x, y2: ry + (major ? 6 : 3) * px * 1.4, stroke: "var(--muted)", "stroke-width": sw(1) }, ruler);
+      if (x % labelEvery === 0) {
+        const t = el("text", { x, y: ry - 4 * px, "font-size": (11 * px).toFixed(2), "text-anchor": x === 0 ? "start" : "middle" }, ruler);
+        t.textContent = x === 0 ? "0 cm" : String(x / 10);
+      }
+    }
+
+    const lay = { body: el("g", {}, svg), inner: el("g", {}, svg), fins: el("g", {}, svg), top: el("g", {}, svg) };
+    const tag = (node, c, fillable) => { node.dataset.id = c.id; if (fillable) node.classList.add("fillable"); return node; };
+
+    // Fins: each fin projected onto the side view by the cosine of its angle, like OpenRocket.
+    for (const f of fins) {
+      const base = f.body_radius_mm || 0;
+      for (let k = 0; k < f.fin_count; k++) {
+        const ang = (f.base_rotation_deg + k * 360 / f.fin_count) * Math.PI / 180;
+        const proj = Math.cos(ang);
+        if (Math.abs(proj) < 0.02) continue;
+        const pts = f.points_mm.map(([x, y]) => `${(f.x_mm + x).toFixed(2)},${(-(base + y) * proj).toFixed(2)}`).join(" ");
+        tag(el("polygon", { points: pts, fill: "var(--fin-fill)", stroke: "var(--airframe)", "stroke-width": sw(1.3) }, lay.fins), f, true);
+      }
+    }
+
+    for (const c of comps) {
+      if (c.type === "NoseCone" || c.type === "Transition") {
+        const n = 48, top = [], bot = [];
+        for (let i = 0; i <= n; i++) {
+          const x = c.length_mm * i / n, r = profileRadius(c, x);
+          top.push(`${(c.x_mm + x).toFixed(2)},${(-r).toFixed(2)}`);
+          bot.unshift(`${(c.x_mm + x).toFixed(2)},${r.toFixed(2)}`);
+        }
+        tag(el("polygon", { points: top.concat(bot).join(" "), fill: "none", stroke: "var(--airframe)", "stroke-width": sw(1.6) }, lay.body), c, true);
+        if (c.aft_shoulder_length_mm > 0)
+          tag(el("rect", { x: c.x_mm + c.length_mm, y: -c.aft_shoulder_radius_mm, width: c.aft_shoulder_length_mm, height: 2 * c.aft_shoulder_radius_mm,
+            fill: "none", stroke: "var(--shoulder)", "stroke-width": sw(1) }, lay.inner), c);
+        if (c.fore_shoulder_length_mm > 0)
+          tag(el("rect", { x: c.x_mm - c.fore_shoulder_length_mm, y: -c.fore_shoulder_radius_mm, width: c.fore_shoulder_length_mm, height: 2 * c.fore_shoulder_radius_mm,
+            fill: "none", stroke: "var(--shoulder)", "stroke-width": sw(1) }, lay.inner), c);
+      } else if (c.type === "BodyTube") {
+        tag(el("rect", { x: c.x_mm, y: -c.outer_radius_mm, width: c.length_mm, height: 2 * c.outer_radius_mm,
+          fill: "none", stroke: "var(--airframe)", "stroke-width": sw(1.6) }, lay.body), c, true);
+      } else if (["InnerTube", "TubeCoupler", "Bulkhead", "EngineBlock"].includes(c.type)) {
+        tag(el("rect", { x: c.x_mm, y: -c.outer_radius_mm, width: c.length_mm, height: 2 * c.outer_radius_mm,
+          fill: "none", stroke: "var(--internal)", "stroke-width": sw(1.1) }, lay.inner), c, true);
+      } else if (c.type === "CenteringRing") {
+        for (const s of [-1, 1])
+          tag(el("rect", { x: c.x_mm, y: s < 0 ? -c.outer_radius_mm : c.inner_radius_mm, width: Math.max(c.length_mm, 1), height: c.outer_radius_mm - c.inner_radius_mm,
+            fill: "none", stroke: "var(--internal)", "stroke-width": sw(1.1) }, lay.inner), c, true);
+      } else if (["MassComponent", "ShockCord", "Streamer"].includes(c.type)) {
+        const r = c.radius_mm, y0 = c.radial_position_mm || 0;
+        tag(el("rect", { x: c.x_mm, y: y0 - r, width: c.length_mm, height: 2 * r, rx: Math.min(r, c.length_mm) * 0.45,
+          fill: "none", stroke: "var(--internal)", "stroke-width": sw(1.1), "stroke-dasharray": `${sw(4)} ${sw(3)}` }, lay.inner), c, true);
+      } else if (c.type === "Parachute") {
+        const r = c.radius_mm, cx = c.x_mm + c.length_mm / 2;
+        const g = tag(el("g", {}, lay.inner), c);
+        el("rect", { x: c.x_mm, y: -r, width: c.length_mm, height: 2 * r, rx: r * 0.45, fill: "none", stroke: "var(--chute)",
+          "stroke-width": sw(1.1), "stroke-dasharray": `${sw(4)} ${sw(3)}`, class: "fillable" }, g);
+        const s = Math.min(r, c.length_mm / 2) * 0.7;   // little canopy glyph, like OpenRocket's
+        el("path", { d: `M ${cx - s} ${-s * 0.15} A ${s} ${s * 0.8} 0 0 1 ${cx + s} ${-s * 0.15} M ${cx - s} ${-s * 0.15} L ${cx} ${s} L ${cx + s} ${-s * 0.15} M ${cx} ${-s * 0.9} L ${cx} ${s}`,
+          fill: "none", stroke: "var(--chute)", "stroke-width": sw(1) }, g);
+      } else if (c.type === "RailButton" || c.type === "LaunchLug") {
+        const parent = byId[c.parent] || {};
+        const R = parent.outer_radius_mm || maxR, dir = Math.cos((c.angle_deg || 0) * Math.PI / 180) >= 0 ? -1 : 1;
+        const h = c.height_mm || 2 * (c.outer_radius_mm || 3), w = c.outer_diameter_mm || c.length_mm || 6;
+        tag(el("rect", { x: c.x_mm - (c.length_mm ? 0 : w / 2), y: dir < 0 ? -R - h : R, width: c.length_mm || w, height: h,
+          fill: "none", stroke: "var(--airframe)", "stroke-width": sw(1.2) }, lay.body), c, true);
+      }
+    }
+
+    for (const m of design.motors)
+      el("rect", { x: m.x_mm, y: -m.diameter_mm / 2, width: m.length_mm, height: m.diameter_mm, fill: "var(--motor)", "fill-opacity": 0.85,
+        stroke: "var(--internal)", "stroke-width": sw(0.8) }, lay.inner);
+
+    // CG (blue-and-white quartered circle) and CP (red dot), as in OpenRocket.
+    if ($("show-cgcp").checked) {
+      const r = 7 * px;
+      const cg = el("g", { "aria-label": "Centre of gravity" }, lay.top);
+      el("circle", { cx: S.cg_mm, cy: 0, r, fill: "#fff", stroke: "#1f3fbf", "stroke-width": sw(1.4) }, cg);
+      el("path", { d: `M ${S.cg_mm} 0 L ${S.cg_mm} ${-r} A ${r} ${r} 0 0 1 ${S.cg_mm + r} 0 Z M ${S.cg_mm} 0 L ${S.cg_mm} ${r} A ${r} ${r} 0 0 1 ${S.cg_mm - r} 0 Z`, fill: "#1f3fbf" }, cg);
+      const cp = el("g", { "aria-label": "Centre of pressure" }, lay.top);
+      el("circle", { cx: S.cp_mm, cy: 0, r, fill: "#fff", stroke: "#d23b3b", "stroke-width": sw(1.4) }, cp);
+      el("circle", { cx: S.cp_mm, cy: 0, r: r * 0.62, fill: "#d23b3b" }, cp);
+    }
+    applySelection();
+  }
+
+  function applySelection() {
+    document.querySelectorAll("#svg .hl").forEach(n => n.classList.remove("hl"));
+    document.querySelectorAll("#parts tr.sel").forEach(n => n.classList.remove("sel"));
+    if (selected == null) { $("detail").textContent = "Tap a part to see its details."; return; }
+    document.querySelectorAll(`#svg [data-id="${selected}"]`).forEach(n => {
+      n.classList.add("hl");
+      n.querySelectorAll?.(".fillable, rect, path").forEach(k => k.classList.add("hl"));
+    });
+    const row = document.querySelector(`#parts tr[data-row="${selected}"]`);
+    if (row) row.classList.add("sel");
+    const c = byId[selected];
+    $("detail").replaceChildren();
+    const b = document.createElement("strong");
+    b.textContent = `${c.name} `;
+    const rest = document.createElement("span");
+    const bits = [TYPE[c.type] || c.type, `starts ${cm(c.x_mm)}`, `${fmt(c.length_mm, 1)} mm long`];
+    const d = diameterOf(c); if (d) bits.push(`⌀ ${fmt(d, 1)} mm`);
+    bits.push(`${fmt(c.mass_g, 1)} g${c.mass_measured ? " (weighed)" : ""}`);
+    if (c.material) bits.push(c.material);
+    if (c.catalogue_part) bits.push(c.catalogue_part);
+    if (c.canopy_diameter_mm) bits.push(`canopy ${fmt(c.canopy_diameter_mm / 25.4, 0)} in, Cd ${c.cd}`);
+    if (c.fin_count) bits.push(`${c.fin_count} fins, span ${fmt(c.span_mm, 0)} mm`);
+    rest.textContent = "· " + bits.join(" · ");
+    $("detail").append(b, rest);
+  }
+
+  function diameterOf(c) {
+    if (c.outer_radius_mm) return 2 * c.outer_radius_mm;
+    if (c.type === "NoseCone") return 2 * c.aft_radius_mm;
+    if (c.type === "Transition") return null;
+    if (c.radius_mm) return 2 * c.radius_mm;
+    if (c.outer_diameter_mm) return c.outer_diameter_mm;
+    return null;
+  }
+
+  function select(id) { selected = selected === id ? null : id; applySelection(); }
+
+  function render() {
+    const S = design.summary;
+    const name = (design.source || "").split("/").pop().replace(/\.ork$/, "") || design.name;
+    $("title").textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    const m = design.motors[0];
+    $("subtitle").textContent = `${design.source || "Design"} · ${m ? m.designation + "-" + fmt(m.delay_s, 0) : "no motor"} · exported ${design.exported_on}`;
+    document.title = $("title").textContent + " · Rocket Design";
+
+    const items = [
+      ["Length", cm(S.length_mm), `airframe ${cm(S.airframe_length_mm)}`],
+      ["Max diameter", cm(S.max_diameter_mm), ""],
+      ["Mass, no motor", fmt(S.mass_no_motor_g, 0) + " g", ""],
+      ["Mass with motor", fmt(S.mass_with_motor_g, 0) + " g", "limit 650 g"],
+      ["Stability", fmt(S.stability_cal, 2) + " cal", fmt(S.stability_pct, 1) + "% of length"],
+      ["CG", cm(S.cg_mm), "from the nose tip"],
+      ["CP", cm(S.cp_mm), `at Mach ${S.cp_mach}`],
+    ];
+    if (m) items.push(["Motor", m.designation.replace(/^AeroTech /, "") + "-" + fmt(m.delay_s, 0), `${fmt(m.total_impulse_ns, 1)} N·s · ${fmt(m.launch_mass_g, 0)} g`]);
+    $("readouts").replaceChildren(...items.map(([k, v, s]) => {
+      const div = document.createElement("div");
+      const dt = document.createElement("dt"); dt.textContent = k;
+      const dd = document.createElement("dd"); dd.textContent = v;
+      if (s) { const sm = document.createElement("small"); sm.textContent = s; dd.appendChild(sm); }
+      div.append(dt, dd); return div;
+    }));
+
+    // Parts table, in tree order.
+    $("parts").replaceChildren(...design.components.map(c => {
+      const tr = document.createElement("tr");
+      tr.dataset.row = c.id; tr.tabIndex = 0;
+      const name = document.createElement("td");
+      name.style.paddingLeft = (0.7 + c.depth * 1.1) + "rem";
+      name.textContent = c.name;
+      if (c.mass_measured) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "weighed"; name.appendChild(b); }
+      const kind = document.createElement("span"); kind.className = "kind"; kind.textContent = TYPE[c.type] || c.type; name.appendChild(kind);
+      const d = diameterOf(c);
+      const cells = [cm(c.x_mm), c.length_mm ? fmt(c.length_mm, 1) + " mm" : "—", d ? fmt(d, 1) + " mm" : "—", fmt(c.mass_g, 1) + " g"];
+      const facts = document.createElement("span"); facts.className = "facts";
+      facts.textContent = `at ${cells[0]} · ${cells[1]}${d ? " · ⌀ " + cells[2] : ""} · ${cells[3]}`;
+      name.appendChild(facts);
+      tr.append(name, ...cells.map(t => {
+        const td = document.createElement("td"); td.textContent = t; return td;
+      }));
+      tr.addEventListener("click", () => select(c.id));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(c.id); } });
+      return tr;
+    }));
+
+    // Predicted flight, if the export included one.
+    const f = design.flight;
+    if (f) {
+      const p = f.predicted, w = f.conditions, t = f.target_apogee_ft;
+      const sec = $("flight");
+      sec.replaceChildren();
+      const h = document.createElement("h2"); h.textContent = "Predicted flight"; h.style.padding = "0.75rem 0.75rem 0"; h.style.margin = "0";
+      const head = document.createElement("p"); head.className = "head";
+      head.textContent = `At ${fmt(w.elevation_ft, 0)} ft, ${fmt(w.wind_mph)} mph wind, ${fmt(w.humidity_pct, 0)}% humidity, ${fmt(w.temperature_f, 0)} °F · calibration ${f.calibration_id || "none"}`;
+      const dl = document.createElement("dl");
+      const cell = (k, v, s, state) => { const div = document.createElement("div"); if (state) div.className = state;
+        const dt = document.createElement("dt"); dt.textContent = k; const dd = document.createElement("dd"); dd.textContent = v;
+        if (s) { const sm = document.createElement("small"); sm.textContent = s; dd.appendChild(sm); } div.append(dt, dd); return div; };
+      const err = p.apogee_ft - t, inWin = p.duration_s >= 37 && p.duration_s <= 40;
+      dl.append(
+        cell("Apogee", fmt(p.apogee_ft, 0) + " ft", `${err >= 0 ? "+" : ""}${fmt(err, 0)} ft from ${t}`, Math.abs(err) <= 25 ? "good" : "off"),
+        cell("Duration", fmt(p.duration_s, 1) + " s", "window 37–40 s", inWin ? "good" : "off"),
+        cell("Score", fmt(f.score.total, 1), "lower is better"),
+        cell("Off the rail", fmt(p.velocity_off_rail_fps, 0) + " ft/s", fmt(p.stability_off_rail_cal, 2) + " cal"),
+        cell("Peak accel.", fmt(p.max_acceleration_g, 1) + " g"),
+        cell("Descent", fmt(p.descent_rate_fps, 1) + " ft/s"),
+      );
+      sec.append(h, head, dl);
+      sec.hidden = false;
+    }
+    draw();
+  }
+
+  $("svg").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-id]");
+    if (t) select(Number(t.dataset.id));
+  });
+  document.querySelectorAll(".zoom button").forEach(b => b.addEventListener("click", () => {
+    zoom = Number(b.dataset.zoom);
+    document.querySelectorAll(".zoom button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    draw();
+  }));
+  $("show-cgcp").addEventListener("change", draw);
+  let resizeTimer;
+  addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => design && draw(), 120); });
+
+  // Phones: start zoomed in; the drawing scrolls sideways inside its own box.
+  if (($("scroll").clientWidth || innerWidth) < 600) {
+    zoom = 2;
+    document.querySelectorAll(".zoom button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.zoom === "2")));
+  }
+
+  fetch(source).then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); })
+    .then(d => { design = d; byId = Object.fromEntries(d.components.map(c => [c.id, c])); render(); })
+    .catch(err => {
+      $("title").textContent = "Design not found";
+      $("subtitle").textContent = `Could not load ${source}: ${err.message}`;
+    });
+})();
+</script>
+</body>
+</html>
