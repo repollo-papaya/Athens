@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ARC Rocket Design Optimizer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one narrow column, a flight-card header with the key numbers, then a link block to the PDF and its contents. */
+  :root {
+    --bg: #f5f7f9;
+    --surface: #ffffff;
+    --fg: #16202a;
+    --muted: #5a6875;
+    --line: #d9e0e6;
+    --accent: #c2410c;
+    --accent-fg: #ffffff;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1;
+      --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f151b; --surface: #17202a; --fg: #e6edf3; --muted: #94a3b1;
+    --line: #2a3642; --accent: #fb7a3c; --accent-fg: #1a0d05; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding-block: 3.5rem 4rem;
+    display: grid;
+    gap: 2.5rem;
+  }
+  .eyebrow {
+    font: 500 0.75rem/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+  }
+  h1 {
+    font: 700 clamp(2rem, 6vw, 2.75rem)/1.1 var(--font-display);
+    letter-spacing: -0.01em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+  }
+  h2 {
+    font: 700 1.125rem/1.3 var(--font-display);
+    margin: 0 0 0.75rem;
+  }
+  p { margin: 0; max-width: 65ch; }
+  .lede { font-size: 1.125rem; color: var(--muted); }
+
+  .specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .spec {
+    padding: 1rem 1.125rem;
+    border-right: 1px solid var(--line);
+    min-width: 0;
+  }
+  .spec:last-child { border-right: 0; }
+  .spec dt {
+    font: 500 0.7rem/1.2 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .spec dd {
+    margin: 0.35rem 0 0;
+    font: 500 1.375rem/1.2 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 560px) {
+    .spec { border-right: 0; border-bottom: 1px solid var(--line); }
+    .spec:last-child { border-bottom: 0; }
+  }
+
+  .doc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .doc-meta { min-width: 0; }
+  .doc-title { font: 700 1.0625rem/1.3 var(--font-display); }
+  .doc-sub { font: 400 0.8125rem/1.4 var(--font-mono); color: var(--muted); margin-top: 0.25rem; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.1rem;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font: 500 0.9375rem/1 var(--font-body);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .formula {
+    font: 400 0.9375rem/1.5 var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.875rem 1rem;
+    overflow-x: auto;
+    margin: 0.75rem 0 0;
+    white-space: pre;
+  }
+
+  ol.toc {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+  ol.toc li {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  ol.toc .n { font: 400 0.8125rem/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  ol.toc .t { min-width: 0; }
+  ol.toc .d { display: block; color: var(--muted); font-size: 0.875rem; }
+
+  footer { font-size: 0.8125rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Athens &middot; Design document &middot; Nov 17, 2026</p>
+    <h1>ARC Rocket Design Optimizer</h1>
+    <p class="lede">A planned web app that runs hundreds of OpenRocket simulations for a set of launch conditions, ranks designs by expected competition score, and returns the top few with a robustness estimate.</p>
+  </header>
+
+  <dl class="specs" aria-label="2027 ARC targets">
+    <div class="spec"><dt>Qualifying apogee</dt><dd>800 ft</dd></div>
+    <div class="spec"><dt>Finals apogee</dt><dd>775&ndash;825 ft</dd></div>
+    <div class="spec"><dt>Duration window</dt><dd>37&ndash;40 s</dd></div>
+    <div class="spec"><dt>Payload</dt><dd>2 eggs</dd></div>
+  </dl>
+
+  <section class="doc" aria-label="Design document">
+    <div class="doc-meta">
+      <div class="doc-title">Read the design document</div>
+      <div class="doc-sub">PDF &middot; 11 pages &middot; 324 KB</div>
+    </div>
+    <a class="btn" href="ARC%20Rocket%20Design%20Optimizer%20Design%20Document.pdf" target="_blank" rel="noopener">Open PDF &rarr;</a>
+  </section>
+
+  <section>
+    <h2>Scoring the optimizer minimizes</h2>
+    <p>Lower is better. The formula comes from past seasons and still has to be confirmed against the 2027 rules.</p>
+    <div class="formula">S = |h &minus; h_target| + 4&middot;d     d = max(0, 37 &minus; t, t &minus; 40)</div>
+  </section>
+
+  <section>
+    <h2>What&rsquo;s in the document</h2>
+    <ol class="toc">
+      <li><span class="n">01</span><span class="t">Purpose and goals<span class="d">Replace the manual RocketSim loop; success measures for the team to set.</span></span></li>
+      <li><span class="n">02</span><span class="t">Scope and non-goals<span class="d">Single-stage egg-lofters only; no safety certification.</span></span></li>
+      <li><span class="n">03</span><span class="t">Users and key flows<span class="d">Sign in, add a rocket, describe conditions, read ranked results, log flights.</span></span></li>
+      <li><span class="n">04</span><span class="t">System architecture<span class="d">GitHub Pages web app, Firestore, a polling Python worker, a Claude parse function.</span></span></li>
+      <li><span class="n">05</span><span class="t">Data contracts<span class="d">Versioned job-request and job-result JSON.</span></span></li>
+      <li><span class="n">06</span><span class="t">Simulation engine and calibration<span class="d">OpenRocket via orlab; correction factors fit from logged flights.</span></span></li>
+      <li><span class="n">07</span><span class="t">Optimizer and scoring<span class="d">Coarse sweep, refinement, then a Monte Carlo robustness check.</span></span></li>
+      <li><span class="n">08</span><span class="t">AI input mapping<span class="d">Free text to a confirmed conditions form, never to code.</span></span></li>
+      <li><span class="n">09</span><span class="t">Web app, worker, and deployment<span class="d">Job states, cost, and offline design cards for the field.</span></span></li>
+      <li><span class="n">10</span><span class="t">Security and cost controls</span></li>
+      <li><span class="n">11</span><span class="t">Limitations and risks</span></li>
+      <li><span class="n">12</span><span class="t">Build plan and open questions</span></li>
+    </ol>
+  </section>
+
+  <footer>Repository: repollo-papaya/Athens</footer>
+</main>
+</body>
+</html>
