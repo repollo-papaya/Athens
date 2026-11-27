@@ -35,6 +35,37 @@ def _mm(metres) -> float:
     return round(float(metres) * 1000, 2)
 
 
+# Standard body tube sizes by outside diameter (mm), for naming parts the way the team does.
+BT_SIZES = [("BT-5", 13.8), ("BT-20", 18.7), ("BT-50", 24.8), ("BT-55", 33.7), ("BT-60", 41.6),
+            ("BT-70", 56.3), ("BT-80", 66.0), ("BT-101", 101.6)]
+
+
+def tube_size(outer_diameter_mm: float) -> str | None:
+    name, size = min(BT_SIZES, key=lambda s: abs(s[1] - outer_diameter_mm))
+    return name if abs(size - outer_diameter_mm) <= 0.8 else None
+
+
+def label_for(item: dict) -> str:
+    """The name the team uses for a part: 'BT-80 body tube', 'Transition (BT-80 to BT-70)'."""
+    kind = item["type"]
+    if kind == "BodyTube":
+        size = tube_size(2 * item["outer_radius_mm"])
+        return f"{size} body tube" if size else f"{2 * item['outer_radius_mm']:.1f} mm body tube"
+    if kind == "Transition":
+        fore = tube_size(2 * item["fore_radius_mm"]) or f"{2 * item['fore_radius_mm']:.0f} mm"
+        aft = tube_size(2 * item["aft_radius_mm"]) or f"{2 * item['aft_radius_mm']:.0f} mm"
+        return f"Transition ({fore} to {aft})"
+    if kind == "NoseCone":
+        return f"Nose cone ({item['shape'].lower().replace('_', ' ')})"
+    if kind.endswith("FinSet"):
+        return f"Fins ({item['fin_count']}, {item['fin_shape'].lower()})"
+    if kind == "InnerTube":
+        return f"Inner tube ({2 * item['outer_radius_mm']:.0f} mm)"
+    if kind == "MassComponent":
+        return f"Mass item ({item['mass_g']:g} g)" if item["name"] in ("Mass Component", "Mass component") else item["name"]
+    return item["name"]
+
+
 def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
     kind = str(c.getClass().getSimpleName())
     locations = c.getComponentLocations()
@@ -50,6 +81,15 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
         "mass_measured": bool(c.isMassOverridden()),
         "internal": kind in INTERNAL,
     }
+    try:
+        item["calculated_mass_g"] = round(float(c.getComponentMass()) * 1000, 1)
+    except Exception:
+        pass
+    try:
+        if c.getFinish() is not None:
+            item["finish"] = str(c.getFinish().toString())
+    except Exception:
+        pass
     try:
         item["material"] = str(c.getMaterial().getName())
     except Exception:
@@ -72,9 +112,11 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
             "aft_shoulder_length_mm": _mm(c.getAftShoulderLength()),
             "aft_shoulder_radius_mm": _mm(c.getAftShoulderRadius()),
             "thickness_mm": _mm(c.getThickness()),
+            "filled": bool(c.isFilled()),
         })
     elif kind == "BodyTube":
-        item.update({"outer_radius_mm": _mm(c.getOuterRadius()), "inner_radius_mm": _mm(c.getInnerRadius())})
+        item.update({"outer_radius_mm": _mm(c.getOuterRadius()), "inner_radius_mm": _mm(c.getInnerRadius()),
+                     "thickness_mm": _mm(c.getThickness())})
     elif kind in ("InnerTube", "TubeCoupler", "CenteringRing", "Bulkhead", "EngineBlock"):
         item.update({"outer_radius_mm": _mm(c.getOuterRadius()), "inner_radius_mm": _mm(c.getInnerRadius())})
         if kind == "InnerTube":
@@ -96,6 +138,10 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
             "points_mm": [[_mm(p.x), _mm(p.y)] for p in c.getFinPoints()],
             "span_mm": _mm(c.getSpan()),
             "root_chord_mm": _mm(c.getLength()),
+            "fin_shape": kind.replace("FinSet", "") or "Fin",
+            "cross_section": str(c.getCrossSection().toString()),
+            "tab_height_mm": _mm(c.getTabHeight()),
+            "tab_length_mm": _mm(c.getTabLength()),
         })
     elif kind in ("RailButton", "LaunchLug"):
         if kind == "RailButton":
@@ -168,6 +214,11 @@ def export(orl, doc, *, flight: dict | None = None, source: str = "") -> dict:
 
     # OpenRocket's stability % uses the airframe length (without a protruding motor).
     airframe_mm = max(c["x_mm"] + c["length_mm"] for c in components if not c["internal"])
+    for c in components:
+        c["label"] = label_for(c)
+    for m in motors:   # name the motor mount by the motor it holds
+        if m["mount_id"] is not None:
+            components[m["mount_id"]]["label"] = f"{m['diameter_mm']:.0f} mm motor mount"
     max_radius = max([c.get("outer_radius_mm", 0) for c in components if not c["internal"]] +
                      [c.get("aft_radius_mm", 0) for c in components] + [c.get("fore_radius_mm", 0) for c in components])
     return {
@@ -217,7 +268,8 @@ def main() -> None:
                 launch = Launch(args.flight_elevation_ft, args.flight_wind_mph, args.flight_humidity_pct,
                                 args.flight_temperature_f)
                 cal = load_calibration(ROOT / "data" / "calibration.json")
-                cal = cal if cal and cal.get("rocket") == args.ork.name else None
+                from openrocket import calibration_for
+                cal = calibration_for(cal, args.ork.name)
                 r = run_with(orl, args.ork, launch, calibration=cal)
                 flight = {"conditions": {k: getattr(launch, k) for k in ("elevation_ft", "wind_mph", "humidity_pct", "temperature_f")},
                           "calibration_id": r["calibration_id"], "predicted": r["predicted"], "score": r["score"],

@@ -37,7 +37,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = Path(os.environ.get("ATHENS_WORKER_CONFIG", Path.home() / ".config" / "athens-worker.json"))
 COLLECTION = "sim_jobs"
-ROCKETS = {"ederance": ROOT / "rockets" / "ederance.ork"}   # rockets the app may ask for
+# Rockets the app may ask for. "ederance" is the team rocket as now built: ederance.ork
+# with a 29 mm motor mount (rockets/ederance-29mm.ork, made by sim/derive.py).
+ROCKETS = {"ederance": ROOT / "rockets" / "ederance-29mm.ork"}
 
 
 def firebase_config() -> dict:
@@ -258,7 +260,8 @@ def run_job(orl, job: dict, calibration) -> dict:
     w = job["weather"]
     launch = Launch(elevation_ft=float(w["elevation_ft"]), wind_mph=float(w["wind_mph"]),
                     humidity_pct=float(w["humidity_pct"]), temperature_f=float(w["temperature_f"]))
-    cal = calibration if calibration and calibration.get("rocket") == ROCKETS[rocket].name else None
+    from openrocket import calibration_for
+    cal = calibration_for(calibration, ROCKETS[rocket].name)
     changes = job.get("changes")
     extra_args, applied = {}, None
     if changes is not None:

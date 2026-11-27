@@ -33,5 +33,10 @@
       "within_5_pct": 13,
       "n": 38
     }
-  }
+  },
+  "applies_to": [
+    "ederance.ork",
+    "ederance-29mm.ork"
+  ],
+  "applies_to_note": "ederance-29mm.ork is ederance.ork with a 29 mm motor mount and motor (sim/derive.py); the parachutes, which the calibration corrects, are unchanged."
 }

@@ -41,6 +41,8 @@
    "mass_g": 20.0,
    "mass_measured": true,
    "internal": false,
+   "calculated_mass_g": 29.4,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Foam, urethane, bulk",
    "shape": "ELLIPSOID",
    "shape_param": 0.0,
@@ -50,7 +52,9 @@
    "fore_shoulder_radius_mm": 0.0,
    "aft_shoulder_length_mm": 25.4,
    "aft_shoulder_radius_mm": 31.75,
-   "thickness_mm": 33.02
+   "thickness_mm": 33.02,
+   "filled": true,
+   "label": "Nose cone (ellipsoid)"
   },
   {
    "id": 1,
@@ -63,10 +67,14 @@
    "mass_g": 39.8,
    "mass_measured": true,
    "internal": false,
+   "calculated_mass_g": 31.9,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Paper, spiral kraft glassine, Estes avg, bulk",
    "catalogue_part": "SEMROC BT-80180",
    "outer_radius_mm": 33.02,
-   "inner_radius_mm": 32.49
+   "inner_radius_mm": 32.49,
+   "thickness_mm": 0.53,
+   "label": "BT-80 body tube"
   },
   {
    "id": 2,
@@ -79,9 +87,11 @@
    "mass_g": 91.9,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 91.9,
    "radius_mm": 31.75,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (91.9 g)"
   },
   {
    "id": 3,
@@ -94,9 +104,11 @@
    "mass_g": 73.3,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 73.3,
    "radius_mm": 31.75,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (73.3 g)"
   },
   {
    "id": 4,
@@ -109,9 +121,11 @@
    "mass_g": 0.0,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 0.0,
    "radius_mm": 31.75,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (0 g)"
   },
   {
    "id": 5,
@@ -124,11 +138,13 @@
    "mass_g": 2.1,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 1.2,
    "material": "Cardboard",
    "outer_radius_mm": 9.5,
    "inner_radius_mm": 9.0,
    "motor_mount": false,
-   "motor_overhang_mm": 0.0
+   "motor_overhang_mm": 0.0,
+   "label": "Inner tube (19 mm)"
   },
   {
    "id": 6,
@@ -141,9 +157,11 @@
    "mass_g": 8.0,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 8.0,
    "radius_mm": 7.5,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (8 g)"
   },
   {
    "id": 7,
@@ -156,10 +174,13 @@
    "mass_g": 2.0,
    "mass_measured": true,
    "internal": false,
+   "calculated_mass_g": 0.8,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Delrin",
    "outer_diameter_mm": 9.7,
    "height_mm": 9.7,
-   "angle_deg": 180.0
+   "angle_deg": 180.0,
+   "label": "Rail Button"
   },
   {
    "id": 8,
@@ -172,10 +193,13 @@
    "mass_g": 2.0,
    "mass_measured": true,
    "internal": false,
+   "calculated_mass_g": 0.8,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Delrin",
    "outer_diameter_mm": 9.7,
    "height_mm": 9.7,
-   "angle_deg": 180.0
+   "angle_deg": 180.0,
+   "label": "Rail Button"
   },
   {
    "id": 9,
@@ -188,9 +212,11 @@
    "mass_g": 6.8,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 6.8,
    "radius_mm": 12.5,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (6.8 g)"
   },
   {
    "id": 10,
@@ -203,9 +229,11 @@
    "mass_g": 3.5,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 3.5,
    "radius_mm": 12.5,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (3.5 g)"
   },
   {
    "id": 11,
@@ -218,6 +246,8 @@
    "mass_g": 33.3,
    "mass_measured": true,
    "internal": false,
+   "calculated_mass_g": 250.7,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Cardboard",
    "shape": "CONICAL",
    "shape_param": 0.0,
@@ -227,7 +257,9 @@
    "fore_shoulder_radius_mm": 32.49,
    "aft_shoulder_length_mm": 49.0,
    "aft_shoulder_radius_mm": 27.62,
-   "thickness_mm": 33.02
+   "thickness_mm": 33.02,
+   "filled": true,
+   "label": "Transition (BT-80 to BT-70)"
   },
   {
    "id": 12,
@@ -240,10 +272,14 @@
    "mass_g": 24.5,
    "mass_measured": false,
    "internal": false,
+   "calculated_mass_g": 24.5,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Paper, spiral kraft glassine, BT-70, bulk",
    "catalogue_part": "Rocketarium BT-70",
    "outer_radius_mm": 28.16,
-   "inner_radius_mm": 27.69
+   "inner_radius_mm": 27.69,
+   "thickness_mm": 0.47,
+   "label": "BT-70 body tube"
   },
   {
    "id": 13,
@@ -256,12 +292,14 @@
    "mass_g": 23.7,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 2.9,
    "material": "Polyethylene film, HDPE, 0.50 mil, bare",
    "catalogue_part": "Generic competition chute_poly_0.5_21in",
    "radius_mm": 12.5,
    "radial_position_mm": 0.0,
    "canopy_diameter_mm": 533.4,
-   "cd": 0.8
+   "cd": 0.8,
+   "label": "Parachute, 21 in., polyethylene, 0.5 mil, 8 lines"
   },
   {
    "id": 14,
@@ -274,9 +312,11 @@
    "mass_g": 2.5,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 1.0,
    "material": "Balsa",
    "outer_radius_mm": 27.7,
-   "inner_radius_mm": 12.0
+   "inner_radius_mm": 12.0,
+   "label": "Centering Ring"
   },
   {
    "id": 15,
@@ -289,9 +329,11 @@
    "mass_g": 2.5,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 2.9,
    "material": "Basswood",
    "outer_radius_mm": 27.69,
-   "inner_radius_mm": 12.0
+   "inner_radius_mm": 12.0,
+   "label": "Centering Ring"
   },
   {
    "id": 16,
@@ -304,11 +346,13 @@
    "mass_g": 10.5,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 2.8,
    "material": "Cardboard",
    "outer_radius_mm": 12.0,
    "inner_radius_mm": 11.5,
    "motor_mount": true,
-   "motor_overhang_mm": 0.0
+   "motor_overhang_mm": 0.0,
+   "label": "24 mm motor mount"
   },
   {
    "id": 17,
@@ -321,6 +365,8 @@
    "mass_g": 21.0,
    "mass_measured": false,
    "internal": false,
+   "calculated_mass_g": 21.0,
+   "finish": "Regular paint (60 \u00b5m)",
    "material": "Basswood",
    "fin_count": 3,
    "base_rotation_deg": 0.0,
@@ -454,7 +500,12 @@
     ]
    ],
    "span_mm": 50.0,
-   "root_chord_mm": 90.0
+   "root_chord_mm": 90.0,
+   "fin_shape": "Freeform",
+   "cross_section": "Square",
+   "tab_height_mm": 16.0,
+   "tab_length_mm": 71.0,
+   "label": "Fins (3, freeform)"
   },
   {
    "id": 18,
@@ -467,12 +518,14 @@
    "mass_g": 15.9,
    "mass_measured": true,
    "internal": true,
+   "calculated_mass_g": 13.9,
    "material": "Nylon fabric, ripstop, 1.7 oz actual",
    "catalogue_part": "Madcow P-187",
    "radius_mm": 12.5,
    "radial_position_mm": 0.0,
    "canopy_diameter_mm": 457.2,
-   "cd": 0.8
+   "cd": 0.8,
+   "label": "Parachute, 18 in., nylon, 6 lines"
   },
   {
    "id": 19,
@@ -485,9 +538,11 @@
    "mass_g": 2.1,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 2.1,
    "radius_mm": 27.5,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (2.1 g)"
   },
   {
    "id": 20,
@@ -500,9 +555,11 @@
    "mass_g": 7.0,
    "mass_measured": false,
    "internal": true,
+   "calculated_mass_g": 7.0,
    "radius_mm": 12.5,
    "radial_position_mm": 0.0,
-   "role": "MASSCOMPONENT"
+   "role": "MASSCOMPONENT",
+   "label": "Mass item (7 g)"
   }
  ],
  "flight": {
@@ -515,25 +572,25 @@
   "calibration_id": "cal_20261127",
   "predicted": {
    "branch": "Sustainer",
-   "apogee_ft": 825.6,
-   "duration_s": 48.66,
+   "apogee_ft": 825.7,
+   "duration_s": 48.67,
    "time_to_apogee_s": 6.73,
    "optimum_delay_s": 5.45,
    "max_velocity_fps": 282.1,
    "max_mach": 0.252,
    "max_acceleration_g": 12.5,
    "velocity_off_rail_fps": 68.0,
-   "stability_off_rail_cal": 1.27,
+   "stability_off_rail_cal": 1.28,
    "min_stability_cal": 0.7,
    "velocity_at_deployment_fps": 19.0,
    "descent_rate_fps": 19.8,
-   "ground_hit_velocity_fps": 20.0,
-   "landing_distance_ft": 101.9
+   "ground_hit_velocity_fps": 19.9,
+   "landing_distance_ft": 103.2
   },
   "score": {
    "total": 60.3,
-   "altitude_error_ft": 25.6,
-   "duration_error_s": 8.66,
+   "altitude_error_ft": 25.7,
+   "duration_error_s": 8.67,
    "formula": "abs(apogee_ft - target_apogee_ft) + 4 * duration_error_s (assumed; confirm 2027 rules)"
   },
   "target_apogee_ft": 800.0

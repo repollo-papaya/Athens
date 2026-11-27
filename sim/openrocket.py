@@ -226,6 +226,14 @@ def load_calibration(path) -> dict | None:
     return json.loads(path.read_text()) if path.exists() else None
 
 
+def calibration_for(calibration: dict | None, ork_name: str) -> dict | None:
+    """The calibration if it was fitted for this rocket file or lists it under applies_to."""
+    if not calibration:
+        return None
+    covered = {calibration.get("rocket"), *calibration.get("applies_to", [])}
+    return calibration if ork_name in covered else None
+
+
 def describe_rocket(orl, doc, sim) -> dict:
     """Parts, mass and motor of the configuration being flown."""
     rocket = doc.getRocket()
@@ -289,6 +297,9 @@ def set_mount_diameter(rocket, motor_diameter_mm: float, length_mm: float | None
     Centering rings follow: their inner diameter is set to the new tube's outside.
     """
     mount = motor_mount(rocket)
+    if abs(float(mount.getInnerRadius()) * 2000 - (motor_diameter_mm + 0.1)) > 0.5:
+        # A different tube: a weight entered for the old one no longer applies.
+        mount.setMassOverridden(False)
     inner_m = (motor_diameter_mm + 0.1) / 1000
     mount.setOuterRadius(inner_m / 2 + wall_mm / 1000)
     mount.setThickness(wall_mm / 1000)

@@ -217,8 +217,8 @@ def main(argv: list[str] | None = None) -> None:
         calibration = None
         if not args.no_calibration and not args.example:
             calibration = load_calibration(args.calibration)
-            if calibration and calibration.get("rocket") != ork.name:
-                calibration = None  # calibrated for a different rocket
+            from openrocket import calibration_for
+            calibration = calibration_for(calibration, ork.name)  # None if fitted for another rocket
         result = run(ork, launch, motor=args.motor, manufacturer=args.manufacturer, delay_s=args.delay_s,
                      target_apogee_ft=args.target_apogee_ft, branch=args.branch, jar=args.jar,
                      liftoff_mass_g=args.liftoff_mass_g, calibration=calibration)

@@ -105,7 +105,9 @@ def _init_worker():
     ctx = open_openrocket()
     _orl = ctx.__enter__()
     cal = load_calibration(CALIBRATION)
-    _cal = cal["chute_cd_scale"] if cal and cal.get("rocket") == ORK.name else 1.0
+    from openrocket import calibration_for
+    cal = calibration_for(cal, ORK.name)
+    _cal = cal["chute_cd_scale"] if cal else 1.0
 
 
 def _fly(motor_row, motor_digest, scale, ballast_g, delay_s, site: Site, *, wind=None, temp=None, hum=None):
