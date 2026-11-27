@@ -63,26 +63,29 @@
   form { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; display: grid; gap: 1.25rem; }
   .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
   @media (max-width: 520px) { .fields { grid-template-columns: 1fr; } }
-  .field { display: grid; gap: 0.35rem; min-width: 0; }
+  .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.4rem; min-width: 0; }
   .field label { font: 500 0.75rem/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .input {
-    display: flex; align-items: baseline;
-    background: var(--field); border: 1px solid var(--line); border-radius: 4px;
-    padding: 0.55rem 0.75rem;
+    display: flex; align-items: center; width: 100%; min-width: 0; min-height: 3.25rem;
+    background: var(--field); border: 1px solid var(--line); border-radius: 6px;
+    padding: 0 0.875rem; cursor: text;
   }
   .input:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); }
   .input input {
-    flex: 1; min-width: 0; border: 0; background: transparent; color: var(--fg); outline: none;
-    font: 500 1.5rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; padding: 0;
+    flex: 1 1 0; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--fg); outline: none;
+    font: 500 1.5rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; padding: 0.6rem 0;
+    -webkit-appearance: none; appearance: textfield; -moz-appearance: textfield; border-radius: 0;
   }
-  .input .unit { font: 400 0.9375rem/1 var(--font-mono); color: var(--muted); padding-left: 0.5rem; }
+  .input input::-webkit-outer-spin-button, .input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .input input::placeholder { color: var(--muted); opacity: 0.45; font-weight: 400; }
+  .input .unit { flex: none; font: 400 1rem/1 var(--font-mono); color: var(--muted); padding-left: 0.5rem; }
   .hint { font-size: 0.8125rem; color: var(--muted); }
   .field.invalid .input { border-color: var(--bad-fg); }
   .field.invalid .hint { color: var(--bad-fg); }
 
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
   button {
-    padding: 0.75rem 1.25rem; border: 0; border-radius: 4px;
+    min-height: 3rem; padding: 0.75rem 1.25rem; -webkit-tap-highlight-color: transparent; border: 0; border-radius: 4px;
     background: var(--accent); color: var(--accent-fg);
     font: 500 1rem/1 var(--font-body); cursor: pointer;
   }
@@ -90,6 +93,14 @@
   button:disabled { opacity: 0.55; cursor: not-allowed; }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .status { font-size: 0.875rem; color: var(--muted); }
+  .status:empty { display: none; }
+  @media (max-width: 520px) {
+    main.wrap { padding-block: 1.25rem 3rem; gap: 1.5rem; }
+    form { padding: 1rem; }
+    .actions { display: grid; }
+    button { width: 100%; font-size: 1.0625rem; }
+    h1 { font-size: 1.625rem; }
+  }
   .status.err { color: var(--bad-fg); }
 
   .saved { border: 1px solid var(--ok-line); background: var(--ok-bg); color: var(--ok-fg); border-radius: 6px; padding: 1rem 1.25rem; display: grid; gap: 0.35rem; }
@@ -126,22 +137,22 @@
     <div class="fields">
       <div class="field" data-min="-1500" data-max="15000">
         <label for="elevation_ft">Field elevation</label>
-        <div class="input"><input id="elevation_ft" name="elevation_ft" type="number" inputmode="decimal" step="any" placeholder="1200" required><span class="unit">ft</span></div>
+        <div class="input"><input id="elevation_ft" name="elevation_ft" type="number" step="any" placeholder="e.g. 1200" enterkeyhint="next" autocomplete="off" required><span class="unit">ft</span></div>
         <span class="hint">Above sea level, &minus;1,500 to 15,000 ft</span>
       </div>
       <div class="field" data-min="0" data-max="60">
         <label for="wind_mph">Wind speed</label>
-        <div class="input"><input id="wind_mph" name="wind_mph" type="number" inputmode="decimal" step="any" placeholder="8" required><span class="unit">mph</span></div>
+        <div class="input"><input id="wind_mph" name="wind_mph" type="number" inputmode="decimal" step="any" placeholder="e.g. 8" enterkeyhint="next" autocomplete="off" required><span class="unit">mph</span></div>
         <span class="hint">Sustained wind, 0 to 60 mph</span>
       </div>
       <div class="field" data-min="0" data-max="100">
         <label for="humidity_pct">Humidity</label>
-        <div class="input"><input id="humidity_pct" name="humidity_pct" type="number" inputmode="decimal" step="any" placeholder="45" required><span class="unit">%</span></div>
+        <div class="input"><input id="humidity_pct" name="humidity_pct" type="number" inputmode="decimal" step="any" placeholder="e.g. 45" enterkeyhint="next" autocomplete="off" required><span class="unit">%</span></div>
         <span class="hint">Relative humidity, 0 to 100%</span>
       </div>
       <div class="field" data-min="-40" data-max="130">
         <label for="temperature_f">Air temperature</label>
-        <div class="input"><input id="temperature_f" name="temperature_f" type="number" inputmode="decimal" step="any" placeholder="62" required><span class="unit">&deg;F</span></div>
+        <div class="input"><input id="temperature_f" name="temperature_f" type="number" step="any" placeholder="e.g. 62" enterkeyhint="done" autocomplete="off" required><span class="unit">&deg;F</span></div>
         <span class="hint">&minus;40 to 130 &deg;F</span>
       </div>
     </div>
@@ -219,11 +230,17 @@
     return ok ? values : null;
   }
 
-  for (const name of FIELDS) {
-    document.getElementById(name).addEventListener("input", (e) => {
-      e.target.closest(".field").classList.remove("invalid");
+  FIELDS.forEach((name, i) => {
+    const input = document.getElementById(name);
+    input.addEventListener("input", () => input.closest(".field").classList.remove("invalid"));
+    input.closest(".input").addEventListener("click", () => input.focus());
+    // Enter/"next" on the phone keyboard moves to the next field; the last one saves.
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || i === FIELDS.length - 1) return;
+      e.preventDefault();
+      document.getElementById(FIELDS[i + 1]).focus();
     });
-  }
+  });
 
   const fmt = (n, unit) => (Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 })) + unit;
   const when = (ts) => ts && ts.toDate ? ts.toDate().toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
