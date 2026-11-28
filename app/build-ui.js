@@ -827,7 +827,7 @@
       const descent = p.duration_s - (p.time_to_apogee_s || 0), goal = 38.5 - (p.time_to_apogee_s || 0);
       let fix = null;
       if (chutes.length && descent > 0 && goal > 0) {
-        const area = chutes.reduce((a, c) => a + c.cd * c.canopy_diameter_mm ** 2, 0), want = area * (descent / goal) ** 2;
+        const area = chutes.reduce((a, c) => a + c.cd * c.canopy_diameter_mm ** 2, 0), want = area * (goal / descent) ** 2;
         const bigc = chutes.slice().sort((a, b) => b.canopy_diameter_mm - a.canopy_diameter_mm)[0];
         const dia = Math.round(Math.sqrt(Math.max(0, bigc.canopy_diameter_mm ** 2 + (want - area) / bigc.cd)) / 12.7) * 12.7;
         if (dia >= 150 && Math.abs(dia - bigc.canopy_diameter_mm) > 5) fix = { c: bigc, dia };
