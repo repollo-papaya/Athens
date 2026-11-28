@@ -134,9 +134,12 @@ Ids are the export's component ids for the unchanged design. The worker checks e
 ## Automatic design (`sim/autodesign.py`)
 
 Designs rockets on its own for the ARC goals, from the team's parts, with OpenRocket in the loop:
-screens every approved motor (one flight each), sizes the fins for 1.3 cal before ballast, then tunes
-nose ballast (apogee), parachute diameter (duration) and the ejection delay with a few secant steps,
-checks apogee between calm and 10 mph wind, and ranks by score, wind steadiness and weight margin.
+screens every approved motor (one flight each), then on the six best motors tries five fin shapes
+(swept, clipped delta, rectangular, elliptical, four fins) and five tube layouts (short, standard and
+long BT-80 and BT-70), each with fins sized for 1.3 cal before ballast and flown in calm air and
+10 mph wind. The two steadiest variants per motor are tuned: nose ballast (apogee), parachute
+diameter (duration) and the ejection delay, with a few secant steps. Ranked by score plus a quarter
+of the 0-10 mph apogee spread, then weight margin.
 The app's **Auto design** tab sends an `auto_runs` request; the worker runs it and returns the ranked
 part lists, which open in the builder or save to the team's designs.
 
