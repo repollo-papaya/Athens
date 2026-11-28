@@ -91,6 +91,12 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
     # Each part's own centre of gravity (absolute), so the app can recompute the rocket's CG live.
     item["cg_x_mm"] = _mm(locations[0].x + c.getComponentCG().x)
     item["movable"] = kind in MOVABLE
+    # How OpenRocket places the part, so the app can lay the rocket out again after edits.
+    try:
+        item["axial_method"] = str(c.getAxialMethod().name())
+        item["axial_offset_mm"] = _mm(c.getAxialOffset())
+    except Exception:
+        pass
     parent = c.getParent()
     if parent is not None and str(parent.getClass().getSimpleName()) not in ("AxialStage", "Rocket"):
         item["offset_in_parent_mm"] = _mm(locations[0].x - parent.getComponentLocations()[0].x)
@@ -152,6 +158,8 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
             "tab_height_mm": _mm(c.getTabHeight()),
             "tab_length_mm": _mm(c.getTabLength()),
         })
+        if kind == "TrapezoidFinSet":
+            item.update({"tip_chord_mm": _mm(c.getTipChord()), "sweep_mm": _mm(c.getSweep())})
     elif kind in ("RailButton", "LaunchLug"):
         if kind == "RailButton":
             item.update({"outer_diameter_mm": _mm(c.getOuterDiameter()), "height_mm": _mm(c.getTotalHeight())})
@@ -196,7 +204,20 @@ def export(orl, doc, *, flight: dict | None = None, source: str = "") -> dict:
     conditions.setMach(0.3)
     conditions.setAOA(0.0)
     conditions.setRollRate(0.0)
-    cp = Barrowman().getWorstCP(config, conditions, WarningSet())
+    calc = Barrowman()
+    cp = calc.getWorstCP(config, conditions, WarningSet())
+    # Each part's normal-force slope and CP (Mach 0.3, zero AOA), so the app can recompute the CP
+    # after an edit by changing only the parts that changed.
+    aero = []
+    forces = calc.getForceAnalysis(config, conditions, WarningSet())
+    for comp in forces.keySet():
+        if str(comp.getClass().getSimpleName()) in ("Rocket", "AxialStage"):
+            continue
+        f = forces.get(comp)
+        cna = float(f.getCP().weight)
+        if abs(cna) > 1e-9 and str(comp.getID()) in ids:
+            aero.append({"id": ids[str(comp.getID())], "cna": round(cna, 5), "cp_x_mm": _mm(f.getCP().x)})
+    aero.sort(key=lambda a: a["id"])
     ref_diameter_mm = _mm(conditions.getRefLength())
     length_mm = _mm(config.getLength())
     cg_mm = _mm(launch.getCM().x)
@@ -251,6 +272,7 @@ def export(orl, doc, *, flight: dict | None = None, source: str = "") -> dict:
             "airframe_length_mm": round(airframe_mm, 2),
         },
         "motors": motors,
+        "aero": aero,
         "components": components,
         "flight": flight,
     }

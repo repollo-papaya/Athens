@@ -96,6 +96,28 @@ removed mass (keeping the CG) or a measured liftoff mass, and body tube lengths.
 worker checks every change again, applies it, flies the rocket, and returns the
 redrawn design with its flight; the page shows it with the 2027 rules check.
 
+## Building in the app (changes the worker applies)
+
+`app/design.html` keeps a draft of changes to the team rocket; `app/builder.js` previews them in the
+browser (layout from each part's placement rule, mass and CG summed, CP from OpenRocket's per-part
+normal-force numbers in the export, recomputed with the same Barrowman formulas for any part whose
+shape changed). Checked against OpenRocket: CP and length exact, stability within 0.02 cal.
+**Simulate** sends the draft as `changes` on a `sim_jobs` request:
+
+| Key | What it does |
+|---|---|
+| `motor`, `delay_s` | an approved-list motor (mount resized to fit) |
+| `mass_mode` + `mass_g` | `nose` ballast, `spread` (keeps CG) or `total` liftoff mass |
+| `tube_lengths_mm` | `{id: mm}` body tube lengths |
+| `chute_diameters_mm` | `{id: mm}` canopy diameters |
+| `edits` | `{id: {length_mm, mass_g, shape, cd, fin_count, root_chord_mm, tip_chord_mm, span_mm, sweep_mm, thickness_mm}}`; a reshaped freeform fin becomes that trapezoid; `mass_g` is a weighed (override) mass |
+| `moves` | `{id: mm from the top of its tube}` for masses, chutes and shock cords |
+| `removes` | `[id, ...]` internal parts, fins, rail buttons (never the motor mount or airframe) |
+| `adds` | up to 12 of `{kind, name, ...}`: `mass`, `parachute`, `shockcord`, `bulkhead`, `coupler`, `centeringring` (`parent_id`, `offset_mm`), `fins` (`parent_id` body tube + outline), `bodytube` (`after_id`, same diameter as that part) |
+
+Ids are the export's component ids for the unchanged design. The worker checks every value again
+(`check_edit`, `check_add`) and the Firestore rules limit the keys and sizes.
+
 ## Design chat
 
 The design page has a chat box. A message ("hit 800 ft and land in the window with

@@ -185,6 +185,197 @@ class Store:
 MOTOR_MENU = ROOT / "data" / "motor_menu.json"
 MAX_TUBE_MM, MIN_TUBE_MM = 1500.0, 50.0
 
+ADD_KINDS = {"mass", "parachute", "shockcord", "bulkhead", "coupler", "centeringring", "bodytube", "fins"}
+SHAPES = {"CONICAL", "OGIVE", "ELLIPSOID", "POWER", "PARABOLIC", "HAACK"}
+
+
+def _num(d: dict, key: str, lo: float, hi: float, what: str, required: bool = False):
+    v = d.get(key)
+    if v is None:
+        if required:
+            raise ValueError(f"{what} is missing")
+        return None
+    v = float(v)
+    if not lo <= v <= hi:
+        raise ValueError(f"{what} must be {lo:g}-{hi:g}")
+    return v
+
+
+def check_fins(d: dict) -> None:
+    _num(d, "fin_count", 1, 8, "fin count")
+    _num(d, "root_chord_mm", 10, 400, "fin root chord (mm)")
+    _num(d, "tip_chord_mm", 0, 400, "fin tip chord (mm)")
+    _num(d, "span_mm", 5, 300, "fin span (mm)")
+    _num(d, "sweep_mm", -200, 400, "fin sweep (mm)")
+    _num(d, "thickness_mm", 0.5, 12, "fin thickness (mm)")
+
+
+def check_edit(e: dict) -> None:
+    allowed = {"length_mm", "mass_g", "shape", "cd", "fin_count", "root_chord_mm", "tip_chord_mm", "span_mm",
+               "sweep_mm", "thickness_mm"}
+    if not set(e) <= allowed:
+        raise ValueError(f"cannot edit {sorted(set(e) - allowed)}")
+    _num(e, "length_mm", 1, 1500, "length (mm)")
+    _num(e, "mass_g", 0, 500, "part mass (g)")
+    _num(e, "cd", 0.3, 2.5, "parachute drag coefficient")
+    if e.get("shape") is not None and e["shape"] not in SHAPES:
+        raise ValueError(f"shape must be one of {sorted(SHAPES)}")
+    check_fins(e)
+
+
+def check_add(a: dict) -> None:
+    kind = a.get("kind", "mass")
+    if kind not in ADD_KINDS:
+        raise ValueError(f"cannot add a part of kind '{kind}'")
+    if not str(a.get("name", "")).strip():
+        raise ValueError("an added part needs a name")
+    _num(a, "mass_g", 0, 300, "added part mass (g)", required=kind == "mass")
+    if kind == "mass" and not float(a["mass_g"]) > 0:
+        raise ValueError("an added mass needs more than 0 g")
+    _num(a, "length_mm", 1, 1500 if kind == "bodytube" else 400, "added part length (mm)", required=kind != "fins")
+    _num(a, "diameter_mm", 1, 120, "added part diameter (mm)")
+    _num(a, "offset_mm", -400, 1500, "position (mm)")
+    _num(a, "canopy_diameter_mm", 150, 1500, "parachute canopy (mm)", required=kind == "parachute")
+    _num(a, "cd", 0.3, 2.5, "parachute drag coefficient")
+    if kind == "bodytube" and a.get("after_id") is None:
+        raise ValueError("a new body tube needs to go after a part of the airframe")
+    if kind != "bodytube" and a.get("parent_id") is None:
+        raise ValueError("an added part needs a tube to go in")
+    if kind == "fins":
+        for k in ("fin_count", "root_chord_mm", "tip_chord_mm", "span_mm", "sweep_mm", "thickness_mm"):
+            if a.get(k) is None:
+                raise ValueError(f"new fins need {k}")
+        check_fins(a)
+
+
+def _override_mass(c, grams) -> None:
+    if grams is None:
+        return
+    if str(c.getClass().getSimpleName()) == "MassComponent":
+        c.setComponentMass(float(grams) / 1000.0)
+    else:
+        c.setMassOverridden(True)
+        c.setOverrideMass(float(grams) / 1000.0)
+
+
+def _set_fin_shape(c, d: dict) -> None:
+    """Fin count, thickness and a trapezoid outline (root, tip, span, sweep) on any fin set.
+
+    A freeform fin set becomes the trapezoid's four points; OpenRocket then calculates it the same way.
+    """
+    import jpype
+    kind = str(c.getClass().getSimpleName())
+    if d.get("fin_count") is not None:
+        c.setFinCount(int(d["fin_count"]))
+    if d.get("thickness_mm") is not None:
+        c.setThickness(float(d["thickness_mm"]) / 1000.0)
+    geom = [d.get(k) for k in ("root_chord_mm", "tip_chord_mm", "span_mm", "sweep_mm")]
+    if all(v is None for v in geom):
+        return
+    if kind == "TrapezoidFinSet":
+        cur = [c.getRootChord(), c.getTipChord(), c.getHeight(), c.getSweep()]
+        root, tip, span, sweep = [float(v) / 1000.0 if v is not None else float(o) for v, o in zip(geom, cur)]
+        c.setRootChord(root); c.setTipChord(tip); c.setHeight(span); c.setSweep(sweep)
+    elif kind == "FreeformFinSet":
+        if any(v is None for v in geom):
+            raise ValueError("changing a freeform fin's outline needs root chord, tip chord, span and sweep")
+        root, tip, span, sweep = [float(v) / 1000.0 for v in geom]
+        Coordinate = jpype.JClass("info.openrocket.core.util.Coordinate")
+        pts = jpype.JArray(Coordinate)([Coordinate(0, 0), Coordinate(sweep, span), Coordinate(sweep + tip, span), Coordinate(root, 0)])
+        c.setPoints(pts)
+    else:
+        raise ValueError(f"cannot reshape a {kind}")
+    if float(c.getTabLength()) > float(c.getLength()):
+        c.setTabLength(float(c.getLength()))
+
+
+def apply_edit(c, e: dict) -> None:
+    import jpype
+    kind = str(c.getClass().getSimpleName())
+    if e.get("length_mm") is not None:
+        if kind.endswith("FinSet") or kind in ("RailButton", "LaunchLug"):
+            raise ValueError(f"{c.getName()}: length cannot be set this way")
+        c.setLength(float(e["length_mm"]) / 1000.0)
+    if e.get("shape") is not None:
+        if kind not in ("NoseCone", "Transition"):
+            raise ValueError(f"{c.getName()} has no shape")
+        Shape = jpype.JClass("info.openrocket.core.rocketcomponent.Transition$Shape")
+        c.setShapeType(Shape.valueOf(e["shape"]))
+    if e.get("cd") is not None:
+        if kind != "Parachute":
+            raise ValueError(f"{c.getName()} is not a parachute")
+        c.setCD(float(e["cd"]))
+    if any(e.get(k) is not None for k in ("fin_count", "root_chord_mm", "tip_chord_mm", "span_mm", "sweep_mm", "thickness_mm")):
+        if not kind.endswith("FinSet"):
+            raise ValueError(f"{c.getName()} is not a fin set")
+        _set_fin_shape(c, e)
+    _override_mass(c, e.get("mass_g"))
+
+
+def build_part(a: dict, targets: dict):
+    """Create one added part in the OpenRocket model and place it."""
+    import jpype
+    J = lambda name: jpype.JClass("info.openrocket.core.rocketcomponent." + name)
+    AxialMethod = J("position.AxialMethod")
+    kind = a.get("kind", "mass")
+    name = str(a["name"]).strip()[:40]
+    if kind == "bodytube":
+        after = targets[int(a["after_id"])]
+        stage = after.getParent()
+        if str(stage.getClass().getSimpleName()) != "AxialStage":
+            raise ValueError("a body tube goes after a nose cone, body tube or transition")
+        tube = J("BodyTube")()
+        tube.setName(name)
+        tube.setLength(float(a["length_mm"]) / 1000.0)
+        prev_r = float(after.getAftRadius()) if hasattr(after, "getAftRadius") else float(after.getOuterRadius())
+        tube.setOuterRadius(float(a["diameter_mm"]) / 2000.0 if a.get("diameter_mm") else prev_r)
+        if hasattr(after, "getThickness") and str(after.getClass().getSimpleName()) == "BodyTube":
+            tube.setThickness(float(after.getThickness()))
+        stage.addChild(tube, jpype.JInt(int(stage.getChildPosition(after)) + 1))
+        _override_mass(tube, a.get("mass_g"))
+        return tube
+    parent = targets[int(a["parent_id"])]
+    pkind = str(parent.getClass().getSimpleName())
+    if kind == "fins":
+        if pkind != "BodyTube":
+            raise ValueError("fins go on a body tube")
+        item = J("TrapezoidFinSet")()
+        item.setName(name)
+        parent.addChild(item)
+        _set_fin_shape(item, a)
+    else:
+        if pkind not in {"BodyTube", "NoseCone", "Transition", "InnerTube", "TubeCoupler"}:
+            raise ValueError("parts can only be added inside a tube or the nose cone")
+        inner = float(parent.getInnerRadius()) if hasattr(parent, "getInnerRadius") else 0.0
+        if inner <= 0:
+            inner = float(parent.getAftShoulderRadius()) if hasattr(parent, "getAftShoulderRadius") else 0.03
+        want_r = float(a["diameter_mm"]) / 2000.0 if a.get("diameter_mm") else inner
+        if kind in ("mass", "parachute", "shockcord"):
+            item = {"mass": J("MassComponent"), "parachute": J("Parachute"), "shockcord": J("ShockCord")}[kind]()
+            item.setName(name)
+            item.setLength(float(a["length_mm"]) / 1000.0)
+            item.setRadius(min(want_r, inner))
+            if kind == "parachute":
+                item.setDiameter(float(a["canopy_diameter_mm"]) / 1000.0)
+                item.setCD(float(a.get("cd") or 0.8))
+        else:
+            item = {"bulkhead": J("Bulkhead"), "coupler": J("TubeCoupler"), "centeringring": J("CenteringRing")}[kind]()
+            item.setName(name)
+            item.setLength(float(a["length_mm"]) / 1000.0)
+            item.setOuterRadiusAutomatic(True)
+            if kind == "coupler":
+                item.setThickness(0.0008)
+        parent.addChild(item)
+        _override_mass(item, a.get("mass_g"))
+    length_mm = float(item.getLength()) * 1000
+    parent_len = float(parent.getLength()) * 1000
+    offset = float(a.get("offset_mm") or 0)
+    if kind != "coupler":   # a coupler may stick out of the top of its tube
+        offset = max(0.0, min(offset, parent_len - length_mm))
+    item.setAxialMethod(AxialMethod.TOP)
+    item.setAxialOffset(offset / 1000.0)
+    return item
+
 
 def design_changes(changes: dict):
     """Check a request's design changes and turn them into simulation arguments.
@@ -230,8 +421,10 @@ def design_changes(changes: dict):
         if mode == "spread" and not -300 <= mass <= 300:
             raise ValueError("added mass must be -300 to +300 g")
 
-    # Moved, added and removed parts. Ids are those of the design the app showed (before changes).
+    # Moved, added, removed and edited parts. Ids are those of the design the app showed (before changes).
     MOVABLE = {"MassComponent", "Parachute", "Streamer", "ShockCord"}
+    REMOVABLE = MOVABLE | {"TrapezoidFinSet", "FreeformFinSet", "EllipticalFinSet", "TubeFinSet", "Bulkhead",
+                           "TubeCoupler", "CenteringRing", "RailButton", "LaunchLug", "InnerTube", "EngineBlock"}
     TUBES = {"BodyTube", "NoseCone", "Transition", "InnerTube", "TubeCoupler"}
     chutes = {int(k): float(v) for k, v in (changes.get("chute_diameters_mm") or {}).items()}
     for v in chutes.values():
@@ -240,30 +433,33 @@ def design_changes(changes: dict):
     moves = {int(k): float(v) for k, v in (changes.get("moves") or {}).items()}
     removes = [int(x) for x in (changes.get("removes") or [])]
     adds = list(changes.get("adds") or [])
-    if len(moves) > 30 or len(removes) > 20 or len(adds) > 8:
+    edits = {int(k): dict(v) for k, v in (changes.get("edits") or {}).items()}
+    if len(moves) > 30 or len(removes) > 20 or len(adds) > 12 or len(edits) > 30:
         raise ValueError("too many part changes in one request")
     for a in adds:
-        if not (0 < float(a.get("mass_g", -1)) <= 300 and 1 <= float(a.get("length_mm", 0)) <= 400
-                and 1 <= float(a.get("diameter_mm", 0)) <= 120 and str(a.get("name", "")).strip()):
-            raise ValueError("an added part needs a name, 0-300 g, 1-400 mm long and 1-120 mm wide")
+        check_add(a)
+    for e in edits.values():
+        check_edit(e)
 
     def prepare(rocket):
-        from openrocket import _walk
         import jpype
-        for key in ("tubes", "moved", "added", "removed", "chutes"):
+        for key in ("tubes", "moved", "added", "removed", "chutes", "edited"):
             applied.pop(key, None)
         # Resolve every id against the unchanged design first.
-        targets = {cid: component_by_id(rocket, cid)
-                   for cid in {*lengths, *moves, *removes, *chutes, *(int(a["parent_id"]) for a in adds)}}
+        wanted = {*lengths, *moves, *removes, *chutes, *edits}
+        wanted |= {int(a["parent_id"]) for a in adds if a.get("parent_id") is not None}
+        wanted |= {int(a["after_id"]) for a in adds if a.get("after_id") is not None}
+        targets = {cid: component_by_id(rocket, cid) for cid in wanted}
         if any(c is None for c in targets.values()):
             raise ValueError("a part in the request does not exist in the design")
+        kind_of = lambda c: str(c.getClass().getSimpleName())
         if entry is not None:
             mount = motor_mount(rocket)
             length = max(float(mount.getLength()) * 1000, entry["length_mm"] + 5)
             set_mount_diameter(rocket, entry["diameter_mm"], length)
         for cid, mm in lengths.items():
             c = targets[cid]
-            if str(c.getClass().getSimpleName()) != "BodyTube":
+            if kind_of(c) != "BodyTube":
                 raise ValueError(f"part {cid} is not a body tube")
             applied.setdefault("tubes", []).append({
                 "diameter_mm": round(float(c.getOuterRadius()) * 2000, 1),
@@ -271,44 +467,34 @@ def design_changes(changes: dict):
             c.setLength(mm / 1000.0)
         for cid, dia in chutes.items():
             c = targets[cid]
-            if str(c.getClass().getSimpleName()) != "Parachute":
+            if kind_of(c) != "Parachute":
                 raise ValueError(f"part {cid} is not a parachute")
             applied.setdefault("chutes", []).append({"name": str(c.getName()),
                                                      "from_mm": round(float(c.getDiameter()) * 1000, 1), "to_mm": dia})
             c.setDiameter(dia / 1000.0)
+        for cid, e in edits.items():
+            apply_edit(targets[cid], e)
+            applied.setdefault("edited", []).append({"name": str(targets[cid].getName()), **e})
         AxialMethod = jpype.JClass("info.openrocket.core.rocketcomponent.position.AxialMethod")
         for cid, offset in moves.items():
             c = targets[cid]
-            if str(c.getClass().getSimpleName()) not in MOVABLE:
+            if kind_of(c) not in MOVABLE:
                 raise ValueError(f"part {cid} cannot be moved")
             parent_len = float(c.getParent().getLength()) * 1000
             offset = max(0.0, min(offset, parent_len - float(c.getLength()) * 1000))
             c.setAxialMethod(AxialMethod.TOP)
             c.setAxialOffset(offset / 1000.0)
             applied.setdefault("moved", []).append({"name": str(c.getName()), "offset_mm": round(offset, 1)})
+        for a in adds:
+            item = build_part(a, targets)
+            applied.setdefault("added", []).append({"name": str(item.getName()), "kind": a.get("kind", "mass"),
+                                                     "mass_g": a.get("mass_g")})
         for cid in removes:
             c = targets[cid]
-            if str(c.getClass().getSimpleName()) not in MOVABLE:
-                raise ValueError(f"part {cid} cannot be removed")
+            if kind_of(c) not in REMOVABLE or (kind_of(c) == "InnerTube" and c.isMotorMount()):
+                raise ValueError(f"part {cid} ({c.getName()}) cannot be removed")
             applied.setdefault("removed", []).append({"name": str(c.getName()), "mass_g": round(float(c.getMass()) * 1000, 1)})
             c.getParent().removeChild(c)
-        MassComponent = jpype.JClass("info.openrocket.core.rocketcomponent.MassComponent")
-        for a in adds:
-            parent = targets[int(a["parent_id"])]
-            if str(parent.getClass().getSimpleName()) not in TUBES:
-                raise ValueError("parts can only be added inside a tube or the nose cone")
-            item = MassComponent()
-            item.setName(str(a["name"])[:40])
-            item.setComponentMass(float(a["mass_g"]) / 1000.0)
-            item.setLength(float(a["length_mm"]) / 1000.0)
-            inner = float(parent.getInnerRadius()) if hasattr(parent, "getInnerRadius") else float(a["diameter_mm"]) / 2000
-            item.setRadius(min(float(a["diameter_mm"]) / 2000.0, inner if inner > 0 else 1.0))
-            parent.addChild(item)
-            parent_len = float(parent.getLength()) * 1000
-            offset = max(0.0, min(float(a.get("offset_mm", 0)), parent_len - float(a["length_mm"])))
-            item.setAxialMethod(AxialMethod.TOP)
-            item.setAxialOffset(offset / 1000.0)
-            applied.setdefault("added", []).append({"name": str(item.getName()), "mass_g": float(a["mass_g"]), "offset_mm": round(offset, 1)})
         if mass is not None and mode == "nose":
             add_nose_ballast(rocket, mass)
             applied["nose_ballast_g"] = mass

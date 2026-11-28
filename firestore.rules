@@ -41,7 +41,7 @@ service cloud.firestore {
     function validChanges(c) {
       return c is map
         && c.keys().hasOnly(['motor', 'delay_s', 'mass_g', 'mass_mode', 'tube_lengths_mm', 'moves', 'removes', 'adds',
-                             'chute_diameters_mm'])
+                             'chute_diameters_mm', 'edits'])
         && (!('motor' in c) || (c.motor is string && c.motor.size() <= 40))
         && (!('delay_s' in c) || inRange(c.delay_s, 0, 20))
         && (!('mass_g' in c) || inRange(c.mass_g, -300, 1000))
@@ -49,8 +49,9 @@ service cloud.firestore {
         && (!('tube_lengths_mm' in c) || (c.tube_lengths_mm is map && c.tube_lengths_mm.size() <= 6))
         && (!('moves' in c) || (c.moves is map && c.moves.size() <= 30))
         && (!('removes' in c) || (c.removes is list && c.removes.size() <= 20))
-        && (!('adds' in c) || (c.adds is list && c.adds.size() <= 8))
-        && (!('chute_diameters_mm' in c) || (c.chute_diameters_mm is map && c.chute_diameters_mm.size() <= 4));
+        && (!('adds' in c) || (c.adds is list && c.adds.size() <= 12))
+        && (!('chute_diameters_mm' in c) || (c.chute_diameters_mm is map && c.chute_diameters_mm.size() <= 4))
+        && (!('edits' in c) || (c.edits is map && c.edits.size() <= 30));
     }
 
     match /launch_conditions/{conditionsId} {
