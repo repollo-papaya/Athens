@@ -8,14 +8,16 @@ centering rings, shock cord, parachute and fins.
 How it searches
   1. Screen: every approved motor flies once in a baseline rocket; motors that can't reach the
      target, or would need the rocket to go over the mass limit, are dropped.
-  2. Shape: for each promising motor, the fins are sized (smallest span that gives the wanted
-     stability) and the tubes trimmed to the shortest legal airframe that fits the motor.
+  2. Shape: for the most promising motors, every fin shape (swept, clipped delta, rectangular,
+     elliptical, four fins) and tube layout (short, standard and long BT-80 and BT-70) is tried.
+     Each variant's fins are sized for the same stability, it flies in calm air and in 10 mph wind,
+     and the steadiest variants that fit under the mass limit go on to tuning.
   3. Tune: nose ballast sets apogee, parachute size sets duration, the ejection delay is the
      available one nearest the optimum. A few OpenRocket flights per design (secant steps).
-  4. Rank: ARC score first, then how much apogee moves between 0 and 10 mph of wind, then mass
-     margin under the limit.
+  4. Rank: ARC score plus a quarter of how much apogee moves between 0 and 10 mph of wind (what a
+     forecast off by 2.5 mph would cost), then mass margin under the limit.
 
-    python sim/autodesign.py                      # El Paso standard day, 800 ft, about 3 minutes
+    python sim/autodesign.py                      # El Paso standard day, 800 ft, about 4 minutes
     python sim/autodesign.py --target-ft 775 --budget-s 120 --json out.json
 """
 from __future__ import annotations
@@ -40,6 +42,7 @@ LENGTH_MIN_MM = 650.0
 T80_MIN_MM = 304.8           # 12 in
 DURATION_WINDOW = (37.0, 40.0)
 DURATION_GOAL = 38.5
+WIND_WEIGHT = 0.25           # ranking: score + this × (apogee change from 0 to 10 mph wind)
 STABILITY_GOAL = 1.3         # fins are sized for this with no ballast; ballast only adds to it
 BT80 = (33.02, 0.53)         # outer radius, wall (mm)
 BT70 = (28.16, 0.47)
@@ -47,6 +50,23 @@ DENSITY = {"Paper (spiral tube)": 0.9, "Cardboard": 0.68, "Birch plywood": 0.63,
 CLOTH_NYLON = 67.0           # g/m²
 
 r1 = lambda v: round(v * 10) / 10
+
+# Fin planforms the search tries. Chords and sweep are fixed; the span is sized for STABILITY_GOAL.
+FIN_SHAPES = {
+    "swept":      {"label": "Swept trapezoid", "type": "TrapezoidFinSet", "count": 3, "root": 90.0, "tip": 40.0, "sweep": 45.0},
+    "delta":      {"label": "Clipped delta", "type": "TrapezoidFinSet", "count": 3, "root": 100.0, "tip": 25.0, "sweep": 75.0},
+    "square":     {"label": "Rectangular", "type": "TrapezoidFinSet", "count": 3, "root": 70.0, "tip": 70.0, "sweep": 0.0},
+    "elliptical": {"label": "Elliptical", "type": "EllipticalFinSet", "count": 3, "root": 90.0, "tip": 0.0, "sweep": 0.0},
+    "four":       {"label": "Four swept", "type": "TrapezoidFinSet", "count": 4, "root": 80.0, "tip": 35.0, "sweep": 40.0},
+}
+# Tube layouts: BT-80 length (payload) and extra BT-70 length beyond what the motor mount needs.
+TUBE_LAYOUTS = {
+    "standard":     {"label": "Standard tubes", "bt80_mm": 330.0, "bt70_extra_mm": 0.0},
+    "short":        {"label": "Short payload tube", "bt80_mm": 310.0, "bt70_extra_mm": 0.0},
+    "long_payload": {"label": "Long payload tube", "bt80_mm": 400.0, "bt70_extra_mm": 0.0},
+    "long_booster": {"label": "Long booster tube", "bt80_mm": 330.0, "bt70_extra_mm": 80.0},
+    "long_both":    {"label": "Long tubes", "bt80_mm": 400.0, "bt70_extra_mm": 80.0},
+}
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +83,18 @@ def _fins_mass(root, tip, span, thick, n, dens):
 
 def _chute_mass(dia_mm, lines=6, line_len=457):
     return r1(math.pi * (dia_mm / 2000) ** 2 * CLOTH_NYLON + lines * line_len / 1000 * 1.5)
+
+
+def _fin_part(f):
+    common = {"id": "fins", "parent": "bt70", "fin_count": f["count"], "root_chord_mm": f["root"], "span_mm": f["span"], "thickness_mm": f["thick"],
+              "cross_section_key": "ROUNDED", "material": "Balsa", "weighed": False, "finish_key": "NORMAL", "axial_method": "BOTTOM", "axial_offset_mm": 0}
+    label = FIN_SHAPES.get(f.get("shape"), {}).get("label", "Trapezoid")
+    if f.get("type") == "EllipticalFinSet":
+        area = math.pi / 4 * f["root"] * f["span"]
+        return {**common, "type": "EllipticalFinSet", "name": f"Balsa fins, {label.lower()}", "length_mm": f["root"],
+                "mass_g": r1(DENSITY["Balsa"] * area * f["thick"] * f["count"] / 1000)}
+    return {**common, "type": "TrapezoidFinSet", "name": f"Balsa fins, {label.lower()}", "tip_chord_mm": f["tip"], "sweep_mm": f["sweep"],
+            "length_mm": max(f["root"], f["sweep"] + f["tip"]), "mass_g": _fins_mass(f["root"], f["tip"], f["span"], f["thick"], f["count"], DENSITY["Balsa"])}
 
 
 def make_spec(team: dict, d: dict) -> dict:
@@ -119,10 +151,9 @@ def make_spec(team: dict, d: dict) -> dict:
                       "outer_radius_mm": ri2, "inner_radius_mm": round(mount_ro, 2), "material": "Birch plywood", "weighed": False,
                       "axial_method": "BOTTOM", "axial_offset_mm": off, "mass_g": _shell(3, ri2, mount_ro, DENSITY["Birch plywood"])})
     comps += [
-        {"id": "fins", "parent": "bt70", "type": "TrapezoidFinSet", "name": "Balsa fins", "fin_count": f["count"], "root_chord_mm": f["root"],
-         "tip_chord_mm": f["tip"], "span_mm": f["span"], "sweep_mm": f["sweep"], "thickness_mm": f["thick"], "length_mm": max(f["root"], f["sweep"] + f["tip"]),
-         "cross_section_key": "ROUNDED", "material": "Balsa", "weighed": False, "finish_key": "NORMAL", "axial_method": "BOTTOM", "axial_offset_mm": 0,
-         "mass_g": _fins_mass(f["root"], f["tip"], f["span"], f["thick"], f["count"], DENSITY["Balsa"])},
+        _fin_part(f),
+    ]
+    comps += [
         take(8, id="rail2", parent="bt70", name="1010 rail button", axial_method="BOTTOM", axial_offset_mm=-60, weighed=True),
     ]
     return {"components": comps, "motor_key": m["key"], "delay_s": d["delay_s"]}
@@ -185,12 +216,19 @@ def nearest_delay(entry, want):
     return min(ok, key=lambda d: abs(d - want))
 
 
-def base_choices(entry, payload):
+def base_choices(entry, payload, shape="swept", layout="standard"):
     mount_len = max(70.0, entry["length_mm"] + 10)
     bt70 = max(254.0, round(mount_len + 120, 0))      # room for shock cord, chute and the mount
-    return {"motor": entry, "bt80_mm": 330.0, "bt70_mm": bt70,
-            "fins": {"count": 3, "root": 90.0, "tip": 40.0, "span": 50.0, "sweep": 45.0, "thick": 3.2},
+    fs, tl = FIN_SHAPES[shape], TUBE_LAYOUTS[layout]
+    return {"motor": entry, "bt80_mm": max(T80_MIN_MM + 5, tl["bt80_mm"]), "bt70_mm": bt70 + tl["bt70_extra_mm"],
+            "fins": {"shape": shape, "type": fs["type"], "count": fs["count"], "root": fs["root"], "tip": fs["tip"], "span": 50.0,
+                     "sweep": fs["sweep"], "thick": 3.2},
+            "shape": shape, "layout": layout,
             "chute_mm": 457.2, "ballast_g": 0.0, "delay_s": nearest_delay(entry, 6), **payload}
+
+
+def variant_label(d):
+    return f"{FIN_SHAPES[d['shape']]['label']} fins, {TUBE_LAYOUTS[d['layout']]['label'].lower()}"
 
 
 def size_airframe(ev, team, d):
@@ -200,7 +238,7 @@ def size_airframe(ev, team, d):
     if s["airframe_length_mm"] < LENGTH_MIN_MM:
         d["bt80_mm"] += LENGTH_MIN_MM - s["airframe_length_mm"] + 5
     lo, hi = 25.0, 110.0
-    for _ in range(9):   # bisection on span
+    for _ in range(7):   # bisection on span
         mid = (lo + hi) / 2
         d["fins"]["span"] = round(mid, 1)
         s = ev.static(make_spec(team, d), d["motor"])
@@ -261,37 +299,83 @@ def run(orl, launch, calibration, *, target_ft=800.0, budget_s=180.0, payload=No
     for e in motors:
         if ev.motor(e)[0] is None:
             continue
-        d, s = size_airframe(ev, team, base_choices(e, payload))
+        d = base_choices(e, payload)
+        d["fins"]["span"] = 60.0                         # fins sized later, only for the motors that pass
+        s = ev.static(make_spec(team, d), e)
+        if s["airframe_length_mm"] < LENGTH_MIN_MM:
+            d["bt80_mm"] += LENGTH_MIN_MM - s["airframe_length_mm"] + 5
         p = ev.fly(make_spec(team, d), e)
         headroom = MASS_LIMIT_G - EGG_MARGIN_G - s["mass_with_motor_g"]
         need = (p["apogee_ft"] - target_ft) / 1.1         # grams of ballast, roughly
         ok = p["apogee_ft"] >= target_ft - 3 and need <= headroom
         screened.append({"entry": e, "d": d, "static": s, "apogee": p["apogee_ft"], "need_g": need, "headroom_g": headroom, "ok": ok})
-        if left() < budget_s * 0.35:
+        if left() < budget_s * 0.7:
             break
     good = sorted([x for x in screened if x["ok"]], key=lambda x: x["need_g"])   # least ballast needed first: least wasted impulse
     progress(f"{len(good)} of {len(screened)} motors can reach {target_ft:.0f} ft under {MASS_LIMIT_G:.0f} g")
+    for x in good:                                       # size the fins for the starting design of each
+        if left() < budget_s * 0.5:
+            good = [y for y in good if "sized" in y]
+            break
+        x["d"], x["static"] = size_airframe(ev, team, x["d"])
+        x["headroom_g"] = MASS_LIMIT_G - EGG_MARGIN_G - x["static"]["mass_with_motor_g"]
+        x["sized"] = True
 
-    # 2-3. tune the promising ones
+    # 2. shape: for the best motors, try other fin shapes and tube layouts. Each variant is sized
+    #    for the same stability, then flown in calm air and in 10 mph wind with no ballast; the
+    #    steadiest variants that still fit under the mass limit go on to tuning.
+    top = good[:max(1, min(len(good), 6))]
+    variants = [(s_, l_) for s_ in FIN_SHAPES for l_ in TUBE_LAYOUTS if (s_, l_) != ("swept", "standard")]
+    variants.sort(key=lambda v: (v[1] != "standard") + (v[0] != "swept"))   # one change at a time first, then both
+    for x in top:
+        x["options"] = [{"d": x["d"], "static": x["static"], "spread": None, "headroom": x["headroom_g"]}]
+    tried = 0
+    if top:
+        progress(f"Trying {len(FIN_SHAPES)} fin shapes and {len(TUBE_LAYOUTS)} tube layouts on {len(top)} motors")
+    for v in variants:
+        for x in top:
+            if left() < budget_s * 0.3:
+                break
+            e = x["entry"]
+            d, s = size_airframe(ev, team, base_choices(e, payload, *v))
+            headroom = MASS_LIMIT_G - EGG_MARGIN_G - s["mass_with_motor_g"]
+            calm = ev.fly(make_spec(team, d), e, wind_mph=0.0)["apogee_ft"]
+            need = (calm - target_ft) / 1.1
+            tried += 1
+            if calm < target_ft - 3 or need > headroom:
+                continue
+            windy = ev.fly(make_spec(team, d), e, wind_mph=10.0)["apogee_ft"]
+            x["options"].append({"d": d, "static": s, "spread": abs(calm - windy), "headroom": headroom - max(0.0, need)})
+    if tried:
+        progress(f"Tried {tried} shape and tube variants")
+
+    def pick(x, n=2):
+        """The steadiest variants in wind (then lightest); the starting design always stays in the running."""
+        opts = sorted(x["options"][1:], key=lambda o: (round(o["spread"]), -o["headroom"]))
+        return [x["options"][0]] + opts[:n]
+
+    # 3. tune: motors in order, the most promising variant of each first
+    queue = [(x, o["d"]) for x in top for o in pick(x)]           # the shaped motors: start design and their two best variants
+    queue += [(x, x["d"]) for x in good if x not in top]          # then the other motors as they are
     results = []
-    for x in good:
+    for x, d0 in queue:
         if left() < 12:
             break
         e = x["entry"]
-        progress(f"Tuning {e['manufacturer']} {e['designation']}")
-        d, p, why = tune(ev, team, x["d"])
+        progress(f"Tuning {e['manufacturer']} {e['designation']}: {variant_label(d0).lower()}")
+        d, p, why = tune(ev, team, d0)
         if why:
             continue
         spec = make_spec(team, d)
         s = ev.static(spec, e)
-        results.append({"name": f"{e['designation']} {e['manufacturer']}, {d['ballast_g']:.0f} g ballast, {d['chute_mm'] / 25.4:.1f} in chute",
+        results.append({"name": f"{e['designation']} {e['manufacturer']}, {variant_label(d)}, {d['ballast_g']:.0f} g ballast, {d['chute_mm'] / 25.4:.1f} in chute",
                         "d": d, "spec": spec, "static": s, "predicted": p})
-        if len(results) >= keep + 3:
+        if len(results) >= 4 * keep:
             break
 
     # 4. wind robustness for the best few, then rank
     results.sort(key=lambda r: r["predicted"]["score"])
-    for r in results[:keep]:
+    for r in results[:2 * keep]:
         if left() < 6:
             r["wind_spread_ft"] = None
             continue
@@ -299,8 +383,19 @@ def run(orl, launch, calibration, *, target_ft=800.0, budget_s=180.0, payload=No
         hi = ev.fly(r["spec"], e, wind_mph=10.0)["apogee_ft"]
         lo = ev.fly(r["spec"], e, wind_mph=0.0)["apogee_ft"]
         r["wind_spread_ft"] = round(abs(hi - lo), 1)
-    ranked = sorted(results[:keep], key=lambda r: (round(r["predicted"]["score"]), r["wind_spread_ft"] or 99,
-                                                    -(MASS_LIMIT_G - r["static"]["mass_with_motor_g"])))
+    def expected(r):
+        """Score plus what a forecast off by 2.5 mph would cost (a quarter of the 0-10 mph apogee spread)."""
+        spread = r.get("wind_spread_ft")
+        return r["predicted"]["score"] + WIND_WEIGHT * (40.0 if spread is None else spread)
+    for r in results:
+        r["expected"] = round(expected(r), 1)
+    ordered = sorted(results[:2 * keep], key=lambda r: (r["expected"], -(MASS_LIMIT_G - r["static"]["mass_with_motor_g"])))
+    ranked, per_motor = [], {}
+    for r in ordered:
+        k = r["d"]["motor"]["key"]
+        if per_motor.get(k, 0) < 2 and len(ranked) < keep:
+            ranked.append(r)
+            per_motor[k] = per_motor.get(k, 0) + 1
     progress(f"Done: {len(ranked)} designs from {ev.flights} OpenRocket flights in {time.time() - t0:.0f} s")
     out = []
     for i, r in enumerate(ranked):
@@ -309,23 +404,26 @@ def run(orl, launch, calibration, *, target_ft=800.0, budget_s=180.0, payload=No
             "rank": i + 1, "name": r["name"], "motor_key": e["key"], "motor": f"{e['manufacturer']} {e['designation']}-{d['delay_s']:g}",
             "reloadable": bool(e.get("reloadable")),
             "spec_json": json.dumps(r["spec"]),
-            "metrics": {"apogee_ft": p["apogee_ft"], "duration_s": p["duration_s"], "score": p["score"], "mass_g": s["mass_with_motor_g"],
+            "metrics": {"apogee_ft": p["apogee_ft"], "duration_s": p["duration_s"], "score": p["score"], "expected_score": r["expected"], "mass_g": s["mass_with_motor_g"],
                         "stability_cal": s["stability_cal"], "length_mm": s["length_mm"], "ballast_g": d["ballast_g"], "chute_in": round(d["chute_mm"] / 25.4, 1),
-                        "fin_span_mm": d["fins"]["span"], "wind_spread_ft": r.get("wind_spread_ft"),
+                        "fin_span_mm": d["fins"]["span"], "fin_shape": FIN_SHAPES[d["shape"]]["label"], "fin_count": d["fins"]["count"],
+                        "tube_layout": TUBE_LAYOUTS[d["layout"]]["label"], "bt80_mm": round(d["bt80_mm"], 1), "bt70_mm": round(d["bt70_mm"], 1),
+                        "wind_spread_ft": r.get("wind_spread_ft"),
                         "velocity_off_rail_fps": p["velocity_off_rail_fps"], "max_acceleration_g": p["max_acceleration_g"]},
         })
     return {"target_apogee_ft": target_ft, "flights": ev.flights, "seconds": round(time.time() - t0, 1), "designs": out,
             "screened": [{"motor": f"{x['entry']['manufacturer']} {x['entry']['designation']}", "apogee_ft": round(x["apogee"]), "ok": x["ok"]} for x in screened],
             "assumptions": [f"Two eggs of {payload['egg_g']:g} g in {payload['protector_g']:g} g protectors and a {payload['altimeter_g']:g} g altimeter",
                             f"Keeps {EGG_MARGIN_G:g} g under {MASS_LIMIT_G:g} g for egg weight variation",
-                            "Fins: balsa, 3.2 mm, three, sized for 1.3 cal before ballast",
+                            f"Fins: balsa, 3.2 mm, sized for {STABILITY_GOAL:g} cal before ballast; tried {', '.join(v['label'].lower() for v in FIN_SHAPES.values())}",
+                            f"Tubes: tried {', '.join(v['label'].lower() for v in TUBE_LAYOUTS.values())}; BT-80 at least 12 in, rocket at least {LENGTH_MIN_MM:g} mm",
                             "Thrust scaled to the NAR-tested impulse; flight calibrated with the team's 38 flights"]}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--target-ft", type=float, default=800.0)
-    ap.add_argument("--budget-s", type=float, default=180.0)
+    ap.add_argument("--budget-s", type=float, default=240.0)
     ap.add_argument("--elevation-ft", type=float, default=3740)
     ap.add_argument("--wind-mph", type=float, default=5)
     ap.add_argument("--humidity-pct", type=float, default=25)

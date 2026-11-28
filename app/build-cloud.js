@@ -231,7 +231,7 @@ function autoStatus(state, label, note) {
 }
 function renderAuto(r) {
   $("auto-results").hidden = false;
-  $("auto-summary").textContent = `${r.designs.length} designs that reach ${B().alt(r.target_apogee_ft)} from ${r.flights} OpenRocket flights in ${fmt(r.seconds, 0)} s. Best first: score, then steadiness in wind, then weight margin.`;
+  $("auto-summary").textContent = `${r.designs.length} designs that reach ${B().alt(r.target_apogee_ft)} from ${r.flights} OpenRocket flights in ${fmt(r.seconds, 0)} s. Fin shapes and tube lengths were varied too. Best first: score plus what a wind forecast off by 2½ mph would cost, then weight margin.`;
   $("auto-list").replaceChildren(...r.designs.map(d => {
     const m = d.metrics;
     const card = el("div", "cand" + (d.rank === 1 ? " rec" : ""));
@@ -239,7 +239,9 @@ function renderAuto(r) {
     if (d.rank === 1) top.append(el("span", "badge-rec", "Best"));
     card.append(top);
     card.append(el("div", "nums", `${B().alt(m.apogee_ft)} · ${fmt(m.duration_s)} s · score ${fmt(m.score)} · ${fmt(m.mass_g, 0)} g · ${fmt(m.stability_cal, 2)} cal`));
-    card.append(el("div", "idea", `${fmt(m.ballast_g, 0)} g nose ballast · ${fmt(m.chute_in)} in parachute · fins ${B().len(m.fin_span_mm)} tall · ` +
+    if (m.fin_shape) card.append(el("div", "idea", `${m.fin_count || 3} ${m.fin_shape.toLowerCase()} fins, ${B().len(m.fin_span_mm)} tall · ` +
+      `${m.tube_layout}: BT-80 ${B().len(m.bt80_mm)}, BT-70 ${B().len(m.bt70_mm)}`));
+    card.append(el("div", "idea", `${fmt(m.ballast_g, 0)} g nose ballast · ${fmt(m.chute_in)} in parachute · ` + (m.fin_shape ? "" : `fins ${B().len(m.fin_span_mm)} tall · `) +
       (m.wind_spread_ft != null ? `apogee moves ${fmt(m.wind_spread_ft, 0)} ft between calm and 10 mph wind` : "wind not checked") +
       ` · ${d.reloadable ? "reloadable motor (adult purchase)" : "single-use motor"}`));
     const open = el("button", "btn primary", "Open in builder"); open.type = "button";
