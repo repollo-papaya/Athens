@@ -96,7 +96,20 @@ removed mass (keeping the CG) or a measured liftoff mass, and body tube lengths.
 worker checks every change again, applies it, flies the rocket, and returns the
 redrawn design with its flight; the page shows it with the 2027 rules check.
 
-## Building in the app (changes the worker applies)
+## Building in the app (a whole rocket as a part list)
+
+`app/design.html` (scripts `app/build-ui.js`, `app/build-cloud.js`, `app/builder.js`) builds a rocket from a
+blank page or a template. The rocket is a list of parts in the format `sim/design.py` exports
+(millimetres, grams, OpenRocket placement rules); `builder.js` lays it out and computes mass, CG
+and CP in the browser (Barrowman, the same formulas as OpenRocket: the team rocket matches to
+0.05 mm in CG and 0.05 mm in CP). **Simulate** sends the list as `spec_json` on a `sim_jobs`
+request; `sim/build.py` builds the same rocket in OpenRocket (every part's weight set to the app's
+number) and `worker.run_spec` flies it with the chosen approved motor, thrust scaled to NAR's
+tested impulse, plus a +10 g run for the suggestions.
+
+    python sim/build.py designs/ederance-29mm.json   # rebuild the team rocket from its part list and compare
+
+## Changes to the team rocket (design chat)
 
 `app/design.html` keeps a draft of changes to the team rocket; `app/builder.js` previews them in the
 browser (layout from each part's placement rule, mass and CG summed, CP from OpenRocket's per-part

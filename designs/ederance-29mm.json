@@ -2,7 +2,7 @@
  "schema_version": 1,
  "name": "Rocket",
  "source": "rockets/ederance-29mm.ork",
- "exported_on": "2026-11-27",
+ "exported_on": "2026-11-28",
  "flight_configuration": "[57F59-12A-5]",
  "summary": {
   "length_mm": 773.65,
@@ -65,6 +65,7 @@
    "axial_method": "AFTER",
    "axial_offset_mm": 0.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Foam, urethane, bulk",
    "shape": "ELLIPSOID",
    "shape_param": 0.0,
@@ -76,6 +77,10 @@
    "aft_shoulder_radius_mm": 31.75,
    "thickness_mm": 33.02,
    "filled": true,
+   "fore_shoulder_thickness_mm": 0.0,
+   "aft_shoulder_thickness_mm": 31.75,
+   "fore_shoulder_capped": false,
+   "aft_shoulder_capped": false,
    "label": "Nose cone (ellipsoid)"
   },
   {
@@ -95,6 +100,7 @@
    "axial_method": "AFTER",
    "axial_offset_mm": 0.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Paper, spiral kraft glassine, Estes avg, bulk",
    "catalogue_part": "SEMROC BT-80180",
    "outer_radius_mm": 33.02,
@@ -232,9 +238,14 @@
    "axial_offset_mm": 38.0,
    "offset_in_parent_mm": 38.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Delrin",
    "outer_diameter_mm": 9.7,
    "height_mm": 9.7,
+   "inner_diameter_mm": 8.0,
+   "base_height_mm": 2.0,
+   "flange_height_mm": 2.0,
+   "screw_height_mm": 0.0,
    "angle_deg": 180.0,
    "label": "Rail Button"
   },
@@ -256,9 +267,14 @@
    "axial_offset_mm": -45.0,
    "offset_in_parent_mm": 280.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Delrin",
    "outer_diameter_mm": 9.7,
    "height_mm": 9.7,
+   "inner_diameter_mm": 8.0,
+   "base_height_mm": 2.0,
+   "flange_height_mm": 2.0,
+   "screw_height_mm": 0.0,
    "angle_deg": 180.0,
    "label": "Rail Button"
   },
@@ -323,6 +339,7 @@
    "axial_method": "AFTER",
    "axial_offset_mm": 0.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Cardboard",
    "shape": "CONICAL",
    "shape_param": 0.0,
@@ -334,6 +351,10 @@
    "aft_shoulder_radius_mm": 27.62,
    "thickness_mm": 33.02,
    "filled": true,
+   "fore_shoulder_thickness_mm": 32.49,
+   "aft_shoulder_thickness_mm": 27.62,
+   "fore_shoulder_capped": false,
+   "aft_shoulder_capped": true,
    "label": "Transition (BT-80 to BT-70)"
   },
   {
@@ -353,6 +374,7 @@
    "axial_method": "AFTER",
    "axial_offset_mm": 0.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Paper, spiral kraft glassine, BT-70, bulk",
    "catalogue_part": "Rocketarium BT-70",
    "outer_radius_mm": 28.16,
@@ -383,6 +405,8 @@
    "radial_position_mm": 0.0,
    "canopy_diameter_mm": 533.4,
    "cd": 0.8,
+   "line_count": 8,
+   "line_length_mm": 533.4,
    "label": "Parachute, 21 in., polyethylene, 0.5 mil, 8 lines"
   },
   {
@@ -471,6 +495,7 @@
    "axial_offset_mm": -5.0,
    "offset_in_parent_mm": 225.0,
    "finish": "Regular paint (60 \u00b5m)",
+   "finish_key": "NORMAL",
    "material": "Basswood",
    "fin_count": 3,
    "base_rotation_deg": 0.0,
@@ -609,6 +634,9 @@
    "cross_section": "Square",
    "tab_height_mm": 16.0,
    "tab_length_mm": 71.0,
+   "tab_offset_mm": 1.0,
+   "tab_offset_method": "MIDDLE",
+   "cross_section_key": "SQUARE",
    "label": "Fins (3, freeform)"
   },
   {
@@ -634,6 +662,8 @@
    "radial_position_mm": 0.0,
    "canopy_diameter_mm": 457.2,
    "cd": 0.8,
+   "line_count": 6,
+   "line_length_mm": 457.2,
    "label": "Parachute, 18 in., nylon, 6 lines"
   },
   {
@@ -691,8 +721,8 @@
   "calibration_id": "cal_20261127",
   "predicted": {
    "branch": "Sustainer",
-   "apogee_ft": 909.2,
-   "duration_s": 50.99,
+   "apogee_ft": 909.0,
+   "duration_s": 50.97,
    "time_to_apogee_s": 6.57,
    "optimum_delay_s": 6.01,
    "max_velocity_fps": 329.1,
@@ -701,15 +731,15 @@
    "velocity_off_rail_fps": 70.1,
    "stability_off_rail_cal": 0.78,
    "min_stability_cal": -5.98,
-   "velocity_at_deployment_fps": 32.9,
+   "velocity_at_deployment_fps": 32.8,
    "descent_rate_fps": 17.5,
-   "ground_hit_velocity_fps": 21.6,
-   "landing_distance_ft": 294.2
+   "ground_hit_velocity_fps": 21.8,
+   "landing_distance_ft": 296.6
   },
   "score": {
-   "total": 153.2,
-   "altitude_error_ft": 109.2,
-   "duration_error_s": 10.99,
+   "total": 152.9,
+   "altitude_error_ft": 109.0,
+   "duration_error_s": 10.97,
    "formula": "abs(apogee_ft - target_apogee_ft) + 4 * duration_error_s (assumed; confirm 2027 rules)"
   },
   "target_apogee_ft": 800.0

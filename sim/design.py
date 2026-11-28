@@ -103,6 +103,7 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
     try:
         if c.getFinish() is not None:
             item["finish"] = str(c.getFinish().toString())
+            item["finish_key"] = str(c.getFinish().name())
     except Exception:
         pass
     try:
@@ -128,6 +129,10 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
             "aft_shoulder_radius_mm": _mm(c.getAftShoulderRadius()),
             "thickness_mm": _mm(c.getThickness()),
             "filled": bool(c.isFilled()),
+            "fore_shoulder_thickness_mm": _mm(c.getForeShoulderThickness()),
+            "aft_shoulder_thickness_mm": _mm(c.getAftShoulderThickness()),
+            "fore_shoulder_capped": bool(c.isForeShoulderCapped()),
+            "aft_shoulder_capped": bool(c.isAftShoulderCapped()),
         })
     elif kind == "BodyTube":
         item.update({"outer_radius_mm": _mm(c.getOuterRadius()), "inner_radius_mm": _mm(c.getInnerRadius()),
@@ -140,7 +145,10 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
     elif kind in ("MassComponent", "Parachute", "Streamer", "ShockCord"):
         item.update({"radius_mm": _mm(c.getRadius()), "radial_position_mm": _mm(c.getRadialPosition())})
         if kind == "Parachute":
-            item.update({"canopy_diameter_mm": _mm(c.getDiameter()), "cd": round(float(c.getCD()), 3)})
+            item.update({"canopy_diameter_mm": _mm(c.getDiameter()), "cd": round(float(c.getCD()), 3),
+                         "line_count": int(c.getLineCount()), "line_length_mm": _mm(c.getLineLength())})
+        if kind == "ShockCord":
+            item["cord_length_mm"] = _mm(c.getCordLength())
         if kind == "MassComponent":
             item["role"] = str(c.getMassComponentType().name())
     elif "FinSet" in kind:
@@ -157,14 +165,21 @@ def component_data(c, index: int, parent_index: int | None, depth: int) -> dict:
             "cross_section": str(c.getCrossSection().toString()),
             "tab_height_mm": _mm(c.getTabHeight()),
             "tab_length_mm": _mm(c.getTabLength()),
+            "tab_offset_mm": _mm(c.getTabOffset()),
+            "tab_offset_method": str(c.getTabOffsetMethod().name()),
+            "cross_section_key": str(c.getCrossSection().name()),
         })
+        if kind == "EllipticalFinSet":
+            item["fin_shape"] = "Elliptical"
         if kind == "TrapezoidFinSet":
             item.update({"tip_chord_mm": _mm(c.getTipChord()), "sweep_mm": _mm(c.getSweep())})
     elif kind in ("RailButton", "LaunchLug"):
         if kind == "RailButton":
-            item.update({"outer_diameter_mm": _mm(c.getOuterDiameter()), "height_mm": _mm(c.getTotalHeight())})
+            item.update({"outer_diameter_mm": _mm(c.getOuterDiameter()), "height_mm": _mm(c.getTotalHeight()),
+                         "inner_diameter_mm": _mm(c.getInnerDiameter()), "base_height_mm": _mm(c.getBaseHeight()),
+                         "flange_height_mm": _mm(c.getFlangeHeight()), "screw_height_mm": _mm(c.getScrewHeight())})
         else:
-            item.update({"outer_radius_mm": _mm(c.getOuterRadius())})
+            item.update({"outer_radius_mm": _mm(c.getOuterRadius()), "thickness_mm": _mm(c.getThickness())})
         item["angle_deg"] = round(math.degrees(float(c.getAngleOffset())), 1)
     return item
 

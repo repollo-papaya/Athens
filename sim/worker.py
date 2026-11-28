@@ -566,6 +566,68 @@ def run_job(orl, job: dict, calibration) -> dict:
     }
 
 
+def run_spec(orl, job: dict, calibration) -> dict:
+    """Simulate a rocket built in the app from a blank page or a template (a part list)."""
+    from build import TEMPLATE, build_rocket, check_spec, set_motor
+    from design import export
+    from openrocket import Launch, calibration_for, find_motor, thrust_scale_listener
+    from simulate import run_with
+    spec = json.loads(job["spec_json"])
+    check_spec(spec)
+    w = job["weather"]
+    launch = Launch(elevation_ft=float(w["elevation_ft"]), wind_mph=float(w["wind_mph"]),
+                    humidity_pct=float(w["humidity_pct"]), temperature_f=float(w["temperature_f"]))
+    menu = {m["key"]: m for m in json.loads(MOTOR_MENU.read_text())["motors"]}
+    entry = menu.get(str(spec.get("motor_key")))
+    if entry is None:
+        raise ValueError("pick a motor from the ARC 2027 approved list")
+    if entry["total_impulse_ns"] > 80:
+        raise ValueError("ARC allows at most 80 N-s")
+    delay = float(spec.get("delay_s", entry["delays_s"][0] if entry["delays_s"] else 0))
+    if entry["delays_s"] and delay not in entry["delays_s"]:
+        raise ValueError(f"{entry['designation']} delays are {entry['delays_s']} s, not {delay:g}")
+    mount = next(c for c in spec["components"] if c.get("type") == "InnerTube" and c.get("motor_mount"))
+    if 2 * float(mount["inner_radius_mm"]) < entry["diameter_mm"] - 0.3:
+        raise ValueError(f"a {entry['diameter_mm']} mm motor does not fit the {2 * float(mount['inner_radius_mm']):.1f} mm motor mount")
+    motor = find_motor(entry["designation"], entry["manufacturer"], entry["total_impulse_ns"], entry["diameter_mm"])
+    if motor is None:
+        raise ValueError(f"OpenRocket has no data for {entry['designation']}")
+    listeners = [thrust_scale_listener(entry["total_impulse_ns"] / float(motor.getTotalImpulseEstimate()))]
+    liftoff = spec.get("liftoff_mass_g")
+    if liftoff is not None and not 100 <= float(liftoff) <= 1000:
+        raise ValueError("measured liftoff mass must be 100-1000 g")
+
+    def simulate(extra=None):
+        doc = orl.load_doc(str(TEMPLATE))
+        build_rocket(doc.getRocket(), spec)
+        set_motor(doc.getRocket(), motor, delay)
+        return run_with(orl, TEMPLATE, launch, calibration=calibration_for(calibration, TEMPLATE.name),
+                        target_apogee_ft=float(job.get("target_apogee_ft", 800)), doc=doc, listeners=listeners,
+                        liftoff_mass_g=(float(liftoff) + (extra or 0)) if liftoff is not None else None,
+                        extra_mass_g=None if liftoff is not None else extra, keep_doc=extra is None)
+
+    result = simulate()
+    p = result["predicted"]
+    r10 = simulate(10)["predicted"]
+    flight = {"conditions": w, "calibration_id": result["calibration_id"], "predicted": p, "score": result["score"],
+              "target_apogee_ft": result["target_apogee_ft"],
+              "sensitivity": {"apogee_ft_per_10g": round(r10["apogee_ft"] - p["apogee_ft"], 2),
+                              "duration_s_per_10g": round(r10["duration_s"] - p["duration_s"], 3)}}
+    design = export(orl, result.pop("_doc"), flight=flight, source="built in the app")
+    return {
+        "sim_version": result["sim_version"], "calibration_id": result["calibration_id"],
+        "motor": f"{entry['manufacturer']} {entry['designation']}-{delay:g}",
+        "liftoff_mass_g": result["rocket"]["liftoff"]["mass_g"],
+        "apogee_ft": p["apogee_ft"], "duration_s": p["duration_s"], "time_to_apogee_s": p["time_to_apogee_s"],
+        "optimum_delay_s": p["optimum_delay_s"], "max_velocity_fps": p["max_velocity_fps"],
+        "max_acceleration_g": p["max_acceleration_g"], "velocity_off_rail_fps": p["velocity_off_rail_fps"],
+        "stability_off_rail_cal": p["stability_off_rail_cal"], "min_stability_cal": p["min_stability_cal"],
+        "descent_rate_fps": p["descent_rate_fps"], "landing_distance_ft": p["landing_distance_ft"],
+        "target_apogee_ft": result["target_apogee_ft"], "score": result["score"], "warnings": result["warnings"],
+        "design_json": json.dumps(design),
+    }
+
+
 def handle_chat(store: Store, orl, calibration, doc: dict) -> None:
     from designer import run_design_chat
     job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
@@ -611,7 +673,7 @@ def handle(store: Store, orl, calibration, doc: dict) -> None:
     print(f"{job_id}: running {job.get('weather')}", flush=True)
     t0 = time.time()
     try:
-        result = run_job(orl, job, calibration)
+        result = run_spec(orl, job, calibration) if job.get("spec_json") else run_job(orl, job, calibration)
         store.update(doc, {"status": "done", "result": result}, server_time=["finished_at"])
         print(f"{job_id}: done in {time.time() - t0:.1f}s — {result['apogee_ft']} ft, {result['duration_s']} s", flush=True)
     except Exception as e:  # report every failure to the app, never leave a job "running"

@@ -306,7 +306,218 @@
   }
   const round = (v, n) => Math.round(v * 10 ** n) / 10 ** n;
 
-  const api = { preview, profileRadius, finGeometry, finShape, finAero, bodyAero, trapezoid, NOSE_BALLAST_FRACTION };
+  // =====================================================================
+  // Whole-rocket analysis for the builder: any list of parts, from a blank page.
+  // =====================================================================
+  // Bulk materials, g/cm³ (OpenRocket's values), and canopy cloth, g/m².
+  const MATERIALS = {
+    "Paper (spiral tube)": 0.9, "Cardboard": 0.68, "Balsa": 0.13, "Basswood": 0.5, "Birch plywood": 0.63,
+    "Plastic (polystyrene)": 1.05, "Foam": 0.13, "Fiberglass": 1.85, "Delrin": 1.42, "Aluminum": 2.7,
+  };
+  const CLOTH = { "Ripstop nylon": 67, "Plastic film (0.5 mil)": 12 };
+  const DEFAULT_MATERIAL = {
+    NoseCone: "Plastic (polystyrene)", BodyTube: "Paper (spiral tube)", Transition: "Plastic (polystyrene)",
+    InnerTube: "Cardboard", TubeCoupler: "Cardboard", CenteringRing: "Birch plywood", Bulkhead: "Birch plywood",
+    EngineBlock: "Cardboard", TrapezoidFinSet: "Balsa", EllipticalFinSet: "Balsa", FreeformFinSet: "Balsa",
+    LaunchLug: "Cardboard", Parachute: "Ripstop nylon",
+  };
+  const isFins = (c) => /FinSet$/.test(c.type);
+  const STAGE = new Set(["NoseCone", "BodyTube", "Transition"]);
+
+  function ellipsePoints(root, span) {
+    const pts = [], n = 16;
+    for (let i = 0; i <= n; i++) { const t = Math.PI * i / n; pts.push([root / 2 - root / 2 * Math.cos(t), span * Math.sin(t)]); }
+    return pts;
+  }
+  // Outline points for any fin set (trapezoid and elliptical are generated from their numbers).
+  function finPoints(c) {
+    if (c.type === "TrapezoidFinSet") return trapezoid(c.root_chord_mm, c.tip_chord_mm, c.span_mm, c.sweep_mm);
+    if (c.type === "EllipticalFinSet") return ellipsePoints(c.root_chord_mm, c.span_mm);
+    return c.points_mm;
+  }
+
+  // Slices of a nose cone or transition (with shoulders): [x_local, volume] for mass and CG.
+  function shellSlices(c) {
+    const out = [], n = 120, L = c.length_mm, t = c.thickness_mm || 2;
+    for (let i = 0; i < n; i++) {
+      const x = (i + 0.5) * L / n, r = profileRadius(c, x);
+      const ri = c.filled ? 0 : Math.max(0, r - t);
+      out.push([x, Math.PI * (r * r - ri * ri) * L / n]);
+    }
+    for (const [end, x0, sign] of [["aft", L, 1], ["fore", 0, -1]]) {
+      const sl = c[end + "_shoulder_length_mm"] || 0, sr = c[end + "_shoulder_radius_mm"] || 0;
+      if (sl <= 0 || sr <= 0) continue;
+      const st = c[end + "_shoulder_thickness_mm"] || t;
+      const ri = c.filled ? 0 : Math.max(0, sr - st);
+      out.push([x0 + sign * sl / 2, Math.PI * (sr * sr - ri * ri) * sl]);
+    }
+    return out;
+  }
+  const tubeVol = (L, ro, ri) => Math.PI * Math.max(0, ro * ro - ri * ri) * L;
+
+  // Volume (mm³) and the part's own CG from its front (mm), from its geometry.
+  function geometry(c) {
+    switch (c.type) {
+      case "NoseCone": case "Transition": {
+        const s = shellSlices(c), v = s.reduce((a, [, dv]) => a + dv, 0);
+        return { vol: v, cg: v > 0 ? s.reduce((a, [x, dv]) => a + x * dv, 0) / v : c.length_mm / 2 };
+      }
+      case "BodyTube": return { vol: tubeVol(c.length_mm, c.outer_radius_mm, c.outer_radius_mm - c.thickness_mm), cg: c.length_mm / 2 };
+      case "InnerTube": case "TubeCoupler": case "EngineBlock": case "CenteringRing":
+        return { vol: tubeVol(c.length_mm, c.outer_radius_mm, c.inner_radius_mm || 0), cg: c.length_mm / 2 };
+      case "Bulkhead": return { vol: tubeVol(c.length_mm, c.outer_radius_mm, 0), cg: c.length_mm / 2 };
+      case "LaunchLug": return { vol: tubeVol(c.length_mm, c.outer_radius_mm, c.outer_radius_mm - (c.thickness_mm || 0.5)), cg: c.length_mm / 2 };
+      default:
+        if (isFins(c)) {
+          const g = finGeometry(finPoints(c));
+          const tab = (c.tab_length_mm || 0) * (c.tab_height_mm || 0);
+          return { vol: (g.area + tab) * c.thickness_mm * c.fin_count, cg: g.centroid_x };
+        }
+        return { vol: 0, cg: (c.length_mm || 0) / 2 };
+    }
+  }
+  // Mass from size and material, for a part nobody has weighed.
+  function estimateMass(c) {
+    if (c.type === "Parachute") {
+      const cloth = CLOTH[c.material] ?? 67;
+      const area = Math.PI * (c.canopy_diameter_mm / 2000) ** 2;
+      return Math.round((area * cloth + (c.line_count || 6) * (c.line_length_mm || 300) / 1000 * 1.5) * 10) / 10;
+    }
+    if (c.type === "MassComponent" || c.type === "ShockCord" || c.type === "Streamer" || c.type === "RailButton") return c.mass_g || 0;
+    const density = c.density ?? MATERIALS[c.material] ?? MATERIALS[DEFAULT_MATERIAL[c.type]] ?? 0.68;
+    return Math.round(density * geometry(c).vol / 1000 * 10) / 10;
+  }
+
+  function innerRadiusOf(p) {
+    if (!p) return 20;
+    switch (p.type) {
+      case "BodyTube": return p.outer_radius_mm - p.thickness_mm;
+      case "NoseCone": return p.aft_shoulder_radius_mm || (p.aft_radius_mm - (p.filled ? 0 : p.thickness_mm || 2));
+      case "Transition": return Math.min(p.fore_radius_mm, p.aft_radius_mm) - (p.filled ? 0 : p.thickness_mm || 2);
+      default: return p.inner_radius_mm || p.outer_radius_mm || 20;
+    }
+  }
+  const foreRadius = (c) => c.type === "BodyTube" ? c.outer_radius_mm : c.type === "NoseCone" ? 0 : c.fore_radius_mm;
+  const aftRadius = (c) => c.type === "BodyTube" ? c.outer_radius_mm : c.aft_radius_mm;
+
+  // Parts marked "auto" take their size from their neighbours, as OpenRocket's automatic radius does.
+  function autoSize(comps) {
+    const stage = comps.filter(c => c.parent == null);
+    stage.forEach((c, i) => {
+      const prev = stage[i - 1], next = stage[i + 1];
+      if (c.type === "NoseCone" && c.auto_radius && next) {
+        c.aft_radius_mm = foreRadius(next) || c.aft_radius_mm;
+        if (c.aft_shoulder_length_mm > 0 && next.type === "BodyTube") c.aft_shoulder_radius_mm = next.outer_radius_mm - next.thickness_mm;
+      }
+      if (c.type === "BodyTube" && c.auto_radius && (prev || next)) c.outer_radius_mm = (prev ? aftRadius(prev) : foreRadius(next)) || c.outer_radius_mm;
+      if (c.type === "Transition" && c.auto_radius) {
+        if (prev) c.fore_radius_mm = aftRadius(prev);
+        if (next) c.aft_radius_mm = foreRadius(next);
+        if (prev && prev.type === "BodyTube" && c.fore_shoulder_length_mm > 0) c.fore_shoulder_radius_mm = prev.outer_radius_mm - prev.thickness_mm;
+        if (next && next.type === "BodyTube" && c.aft_shoulder_length_mm > 0) c.aft_shoulder_radius_mm = next.outer_radius_mm - next.thickness_mm;
+      }
+    });
+    const byId = Object.fromEntries(comps.map(c => [String(c.id), c]));
+    for (const c of comps) {
+      const p = byId[String(c.parent)];
+      if (!p || !c.auto_radius) continue;
+      const ri = innerRadiusOf(p);
+      if (["TubeCoupler", "CenteringRing", "Bulkhead", "EngineBlock"].includes(c.type)) {
+        c.outer_radius_mm = ri;
+        if (c.type === "TubeCoupler") c.inner_radius_mm = ri - 0.8;
+        if (c.type === "CenteringRing") {
+          const mount = comps.find(x => String(x.parent) === String(p.id) && x.type === "InnerTube");
+          c.inner_radius_mm = mount ? mount.outer_radius_mm : Math.min(c.inner_radius_mm || 0, ri - 1);
+        }
+      }
+      if (["MassComponent", "Parachute", "ShockCord", "Streamer"].includes(c.type)) c.radius_mm = Math.min(c.radius_mm || ri, ri);
+      if (isFins(c) || c.type === "RailButton" || c.type === "LaunchLug") c.body_radius_mm = p.outer_radius_mm;
+    }
+  }
+
+  // design: { components, motor: menu entry or null, delay_s, liftoff_mass_g }
+  function analyze(design) {
+    const comps = design.components;
+    autoSize(comps);
+    const byId = Object.fromEntries(comps.map(c => [String(c.id), c]));
+    for (const c of comps) {
+      if (isFins(c)) {
+        c.points_mm = finPoints(c);
+        c.body_radius_mm = (byId[String(c.parent)] || {}).outer_radius_mm || c.body_radius_mm;
+        if (c.type !== "FreeformFinSet") c.length_mm = Math.max(...c.points_mm.map(p => p[0]));
+      }
+      if (!c.weighed) c.mass_g = estimateMass(c);
+    }
+    // lay out, parents first (the list keeps that order)
+    let cursor = 0;
+    for (const c of comps) {
+      const parent = c.parent == null ? null : byId[String(c.parent)];
+      if (!parent) { c.x_mm = cursor; cursor = c.x_mm + c.length_mm; }
+      else c.x_mm = place(c, parent, 0);
+      c.offset_in_parent_mm = parent ? c.x_mm - parent.x_mm : undefined;
+      c.cg_x_mm = c.x_mm + geometry(c).cg;
+    }
+    // motor in the mount, flush with its aft end plus any overhang
+    const motors = [];
+    const mount = comps.find(c => c.type === "InnerTube" && c.motor_mount);
+    const m = design.motor;
+    if (mount && m) {
+      const aft = mount.x_mm + mount.length_mm + (mount.motor_overhang_mm || 0);
+      motors.push({ designation: `${m.manufacturer} ${m.designation}`, delay_s: design.delay_s, x_mm: aft - m.length_mm, length_mm: m.length_mm,
+        diameter_mm: m.diameter_mm, launch_mass_g: m.launch_mass_g || 0, cg_x_mm: aft - m.length_mm / 2, total_impulse_ns: m.total_impulse_ns,
+        mount_id: mount.id, fits: 2 * mount.inner_radius_mm >= m.diameter_mm - 0.3 });
+    }
+    const structure = comps.reduce((a, c) => a + c.mass_g, 0);
+    const motorMass = motors.reduce((a, x) => a + x.launch_mass_g, 0);
+    let total = structure + motorMass;
+    const cg = total > 0 ? (comps.reduce((a, c) => a + c.mass_g * c.cg_x_mm, 0) + motors.reduce((a, x) => a + x.launch_mass_g * x.cg_x_mm, 0)) / total : 0;
+    if (design.liftoff_mass_g > 0) total = design.liftoff_mass_g;   // measured pad weight, CG kept
+
+    const airframe = comps.filter(c => STAGE.has(c.type) || isFins(c));
+    const body = comps.filter(c => STAGE.has(c.type));
+    const refR = Math.max(0, ...body.map(c => Math.max(c.outer_radius_mm || 0, c.aft_radius_mm || 0, c.fore_radius_mm || 0)));
+    let sumN = 0, sumM = 0;
+    const aero = [];
+    if (refR > 0) for (const c of airframe) {
+      const a = isFins(c) ? finAero(c, refR) : (c.type === "NoseCone" || c.type === "Transition") ? bodyAero(c, refR) : null;
+      if (!a || !a.cna) continue;
+      sumN += a.cna; sumM += a.cna * (c.x_mm + a.cp_local);
+      aero.push({ id: c.id, cna: a.cna, cp_x_mm: c.x_mm + a.cp_local });
+    }
+    const cp = sumN > 0 ? sumM / sumN : null;
+    const airframeLen = body.length ? Math.max(...body.map(c => c.x_mm + c.length_mm)) : 0;
+    const length = Math.max(airframeLen, ...motors.map(x => x.x_mm + x.length_mm));
+    return {
+      components: comps, motors, aero,
+      summary: {
+        length_mm: round(length, 2), airframe_length_mm: round(airframeLen, 2), max_diameter_mm: round(2 * refR, 2), reference_diameter_mm: round(2 * refR, 2),
+        mass_no_motor_g: round(total - motorMass, 1), mass_with_motor_g: round(total, 1), cg_mm: round(cg, 2),
+        cp_mm: cp == null ? null : round(cp, 2), cp_mach: 0.3,
+        stability_cal: cp == null || !refR ? null : round((cp - cg) / (2 * refR), 2),
+        stability_pct: cp == null || !airframeLen ? null : round((cp - cg) / airframeLen * 100, 1),
+      },
+    };
+  }
+
+  // A design exported by sim/design.py -> builder parts (weights kept; unweighed parts keep their material density).
+  function importDesign(d) {
+    return d.components.map(c0 => {
+      const c = JSON.parse(JSON.stringify(c0));
+      c.id = String(c.id);
+      c.parent = c.parent == null ? null : String(c.parent);
+      if (c0.label) c.name = c0.label;
+      c.weighed = !!c.mass_measured || ["MassComponent", "ShockCord", "Streamer", "RailButton", "Parachute"].includes(c.type);
+      if (!c.weighed) {
+        const v = geometry({ ...c, points_mm: c.points_mm }).vol;
+        if (v > 0) c.density = c0.mass_g / (v / 1000);
+      }
+      for (const k of ["x_mm", "cg_x_mm", "offset_in_parent_mm", "calculated_mass_g", "mass_measured", "depth", "movable", "internal"]) delete c[k];
+      return c;
+    });
+  }
+
+  const api = { preview, analyze, importDesign, estimateMass, geometry, innerRadiusOf, MATERIALS, CLOTH, DEFAULT_MATERIAL,
+                profileRadius, finGeometry, finShape, finAero, bodyAero, trapezoid, finPoints, NOSE_BALLAST_FRACTION };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.RocketBuilder = api;
 })(typeof window !== "undefined" ? window : globalThis);

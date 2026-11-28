@@ -96,7 +96,7 @@ def run(ork: Path, launch, *, motor, manufacturer, delay_s, target_apogee_ft, br
 
 def run_with(orl, ork: Path, launch, *, motor=None, manufacturer=None, delay_s=None,
              target_apogee_ft=DEFAULT_TARGET_APOGEE_FT, branch=0, liftoff_mass_g=None, calibration=None,
-             prepare=None, extra_mass_g=None, listeners=None, keep_doc=False) -> dict:
+             prepare=None, extra_mass_g=None, listeners=None, keep_doc=False, doc=None) -> dict:
     """One flight on an already-running OpenRocket (the worker keeps one open).
 
     `prepare(rocket)` changes the design before the flight (tube lengths, mount,
@@ -108,7 +108,8 @@ def run_with(orl, ork: Path, launch, *, motor=None, manufacturer=None, delay_s=N
     from openrocket import configure, describe_rocket
 
     scale = calibration["chute_cd_scale"] if calibration else 1.0
-    doc = orl.load_doc(str(ork))
+    if doc is None:
+        doc = orl.load_doc(str(ork))
     if prepare:
         prepare(doc.getRocket())
     sim = configure(orl, doc, launch, motor=motor, manufacturer=manufacturer, delay_s=delay_s,
