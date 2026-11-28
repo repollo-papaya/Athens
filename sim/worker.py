@@ -37,7 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = Path(os.environ.get("ATHENS_WORKER_CONFIG", Path.home() / ".config" / "athens-worker.json"))
 COLLECTION = "sim_jobs"
-CHAT_COLLECTION = "design_chats"   # design chat requests (sim/designer.py)
+CHAT_COLLECTION = "design_chats"
+AUTO_COLLECTION = "auto_runs"      # automatic design runs (sim/autodesign.py)   # design chat requests (sim/designer.py)
 # Rockets the app may ask for. "ederance" is the team rocket as now built: ederance.ork
 # with a 29 mm motor mount (rockets/ederance-29mm.ork, made by sim/derive.py).
 ROCKETS = {"ederance": ROOT / "rockets" / "ederance-29mm.ork"}
@@ -663,6 +664,35 @@ def handle_chat(store: Store, orl, calibration, doc: dict) -> None:
         store.update(doc, {"status": "failed", "error": msg[:500]}, server_time=["finished_at"])
 
 
+def handle_auto(store: Store, orl, calibration, doc: dict) -> None:
+    """An automatic design run: search motors, fins, ballast and parachute for the ARC goals."""
+    from autodesign import run as autodesign
+    from openrocket import Launch
+    job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
+    job_id = doc["name"].rsplit("/", 1)[1]
+    if not store.update(doc, {"status": "running", "claimed_by": store.s.uid, "stage": "Starting"},
+                        server_time=["started_at"], if_unchanged=True):
+        return
+    print(f"{job_id}: automatic design run", flush=True)
+    t0 = time.time()
+    try:
+        w = job["weather"]
+        launch = Launch(elevation_ft=float(w["elevation_ft"]), wind_mph=float(w["wind_mph"]),
+                        humidity_pct=float(w["humidity_pct"]), temperature_f=float(w["temperature_f"]))
+        p = job.get("payload") or {}
+        payload = {"egg_g": float(p.get("egg_g", 59)), "protector_g": float(p.get("protector_g", 15)), "altimeter_g": float(p.get("altimeter_g", 7))}
+        if not (40 <= payload["egg_g"] <= 80 and 0 <= payload["protector_g"] <= 80 and 0 <= payload["altimeter_g"] <= 60):
+            raise ValueError("egg, protector or altimeter weight is out of range")
+        budget = min(600.0, max(45.0, float(job.get("budget_s", 180))))
+        result = autodesign(orl, launch, calibration, target_ft=float(job.get("target_apogee_ft", 800)), budget_s=budget, payload=payload,
+                            progress=lambda stage: store.update(doc, {"stage": stage[:120]}))
+        store.update(doc, {"status": "done", "stage": "Done", "result": result}, server_time=["finished_at"])
+        print(f"{job_id}: done in {time.time() - t0:.0f}s — {len(result['designs'])} designs", flush=True)
+    except Exception as e:
+        traceback.print_exc()
+        store.update(doc, {"status": "failed", "error": f"{type(e).__name__}: {e}"[:500]}, server_time=["finished_at"])
+
+
 def handle(store: Store, orl, calibration, doc: dict) -> None:
     job = {k: from_value(v) for k, v in doc.get("fields", {}).items()}
     job_id = doc["name"].rsplit("/", 1)[1]
@@ -713,6 +743,8 @@ def main() -> None:
                     handle(store, orl, calibration, doc)
                 for doc in store.pending(limit=2, collection=CHAT_COLLECTION):
                     handle_chat(store, orl, calibration, doc)
+                for doc in store.pending(limit=1, collection=AUTO_COLLECTION):
+                    handle_auto(store, orl, calibration, doc)
             except RuntimeError as e:
                 print(f"error: {e}", flush=True)
             if args.once:

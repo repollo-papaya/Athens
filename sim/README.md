@@ -131,6 +131,17 @@ shape changed). Checked against OpenRocket: CP and length exact, stability withi
 Ids are the export's component ids for the unchanged design. The worker checks every value again
 (`check_edit`, `check_add`) and the Firestore rules limit the keys and sizes.
 
+## Automatic design (`sim/autodesign.py`)
+
+Designs rockets on its own for the ARC goals, from the team's parts, with OpenRocket in the loop:
+screens every approved motor (one flight each), sizes the fins for 1.3 cal before ballast, then tunes
+nose ballast (apogee), parachute diameter (duration) and the ejection delay with a few secant steps,
+checks apogee between calm and 10 mph wind, and ranks by score, wind steadiness and weight margin.
+The app's **Auto design** tab sends an `auto_runs` request; the worker runs it and returns the ranked
+part lists, which open in the builder or save to the team's designs.
+
+    python sim/autodesign.py --budget-s 180          # first run: 42 motors, 92 flights, 99 s, 5 designs within 3 ft of 800 ft
+
 ## Design chat
 
 The design page has a chat box. A message ("hit 800 ft and land in the window with

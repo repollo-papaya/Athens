@@ -223,6 +223,69 @@ async function saveDesign(asNew) {
 $("save").addEventListener("click", () => saveDesign(false));
 $("save-copy").addEventListener("click", () => saveDesign(true));
 
+// ----- Automatic design runs (collection "auto_runs", run by sim/autodesign.py on the worker) -----
+let autoWatch = null;
+function autoStatus(state, label, note) {
+  const pill = $("auto-status"); pill.hidden = !label; pill.className = "pill " + (state || ""); pill.textContent = label || "";
+  $("auto-note").textContent = note || "";
+}
+function renderAuto(r) {
+  $("auto-results").hidden = false;
+  $("auto-summary").textContent = `${r.designs.length} designs that reach ${B().alt(r.target_apogee_ft)} from ${r.flights} OpenRocket flights in ${fmt(r.seconds, 0)} s. Best first: score, then steadiness in wind, then weight margin.`;
+  $("auto-list").replaceChildren(...r.designs.map(d => {
+    const m = d.metrics;
+    const card = el("div", "cand" + (d.rank === 1 ? " rec" : ""));
+    const top = el("div", "top2", el("span", "nm", `${d.rank}. ${d.motor}`));
+    if (d.rank === 1) top.append(el("span", "badge-rec", "Best"));
+    card.append(top);
+    card.append(el("div", "nums", `${B().alt(m.apogee_ft)} · ${fmt(m.duration_s)} s · score ${fmt(m.score)} · ${fmt(m.mass_g, 0)} g · ${fmt(m.stability_cal, 2)} cal`));
+    card.append(el("div", "idea", `${fmt(m.ballast_g, 0)} g nose ballast · ${fmt(m.chute_in)} in parachute · fins ${B().len(m.fin_span_mm)} tall · ` +
+      (m.wind_spread_ft != null ? `apogee moves ${fmt(m.wind_spread_ft, 0)} ft between calm and 10 mph wind` : "wind not checked") +
+      ` · ${d.reloadable ? "reloadable motor (adult purchase)" : "single-use motor"}`));
+    const open = el("button", "btn primary", "Open in builder"); open.type = "button";
+    open.addEventListener("click", () => {
+      if (B().dirty() && !confirm("Open this design? The rocket on screen has unsaved changes (Undo can bring it back).")) return;
+      B().openSpec(`Auto: ${d.motor}`, d.spec_json);
+    });
+    const keep = el("button", "btn", "Save to My designs"); keep.type = "button";
+    keep.addEventListener("click", async () => {
+      if (B().dirty() && !confirm("Save this design? It opens in the builder and replaces the rocket on screen (Undo can bring it back).")) return;
+      B().openSpec(`Auto: ${d.motor}`, d.spec_json);
+      await saveDesign(false);
+    });
+    card.append(el("div", "actions", open, keep));
+    return card;
+  }));
+  $("auto-screened").textContent = (r.screened || []).map(x => `${x.motor} ${x.ok ? "✓" : "✗"} ${x.apogee_ft} ft`).join(" · ");
+  $("auto-assume").textContent = "Assumed: " + (r.assumptions || []).join("; ") + ".";
+}
+async function startAuto() {
+  const target = Number($("auto-target").value), egg = Number($("auto-egg").value), prot = Number($("auto-protector").value), alt = Number($("auto-alt").value);
+  if (!(target >= 700 && target <= 900)) return autoStatus("failed", "Check inputs", "Target apogee must be 700 to 900 ft.");
+  if (!(egg >= 40 && egg <= 80) || !(prot >= 0 && prot <= 80) || !(alt >= 0 && alt <= 60)) return autoStatus("failed", "Check inputs", "Egg 40–80 g, protector 0–80 g, altimeter 0–60 g.");
+  const { weather: w, id } = weather();
+  if (autoWatch) autoWatch();
+  $("auto-start").disabled = true;
+  autoStatus("", "Sending", "");
+  try {
+    const ref = await addDoc(collection(db, "auto_runs"), {
+      schema_version: 1, uid: user.uid, created_at: serverTimestamp(), status: "pending", weather: w, target_apogee_ft: target,
+      budget_s: Number($("auto-budget").value), payload: { egg_g: egg, protector_g: prot, altimeter_g: alt }, ...(id ? { conditions_id: id } : {}),
+    });
+    autoStatus("", "Queued", "Waiting for the simulation worker…");
+    autoWatch = onSnapshot(ref, (snap) => {
+      const job = snap.data(); if (!job) return;
+      if (job.status === "running") autoStatus("running", "Designing", job.stage || "Working…");
+      if (job.status === "failed") { autoStatus("failed", "Failed", job.error || "No reason given."); $("auto-start").disabled = false; }
+      if (job.status === "done") { autoStatus("done", "Done", ""); $("auto-start").disabled = false; renderAuto(job.result); }
+    }, (err) => { autoStatus("failed", "Error", err.message); $("auto-start").disabled = false; });
+  } catch (err) {
+    $("auto-start").disabled = false;
+    autoStatus("failed", "Not sent", err.code === "permission-denied" ? "The database refused the request. Publish the latest firestore.rules (they add automatic design runs)." : err.message);
+  }
+}
+$("auto-start").addEventListener("click", startAuto);
+
 function ready() {
   onAuthStateChanged(auth, async (u) => {
     if (!u) return;
@@ -230,7 +293,7 @@ function ready() {
     await loadConditions();
     B().setCloudReady(true);
     $("chat-send").disabled = false;
-    $("save").disabled = false; $("save-copy").disabled = false;
+    $("save").disabled = false; $("save-copy").disabled = false; $("auto-start").disabled = false;
   });
   signInAnonymously(auth).catch((err) => setStatus("failed", "Offline", "Could not sign in: " + (err.code || err.message)));
 }

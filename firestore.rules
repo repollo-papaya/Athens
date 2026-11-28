@@ -8,6 +8,7 @@ rules_version = '2';
 //   sim_jobs           simulation requests from the app, run by a worker (sim/worker.py)
 //   design_chats       design chat requests: a worker designs, simulates and recommends (sim/designer.py)
 //   designs            rockets saved from the builder (app/design.html), shared with the team
+//   auto_runs          automatic design runs: a worker designs rockets for the ARC goals (sim/autodesign.py)
 // Everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -123,6 +124,36 @@ service cloud.firestore {
         && (!('previous_id' in request.resource.data) || (request.resource.data.previous_id is string
               && request.resource.data.previous_id.size() <= 64))
         && (!('target_apogee_ft' in request.resource.data) || inRange(request.resource.data.target_apogee_ft, 700, 900));
+
+      allow read: if signedIn()
+        && (resource == null || resource.data.uid == request.auth.uid || isWorker());
+
+      allow update: if isWorker()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'stage', 'claimed_by', 'started_at', 'finished_at', 'result', 'error'])
+        && ((resource.data.status == 'pending' && request.resource.data.status == 'running'
+               && request.resource.data.claimed_by == request.auth.uid)
+            || (resource.data.status == 'running' && request.resource.data.status in ['running', 'done', 'failed']
+               && resource.data.claimed_by == request.auth.uid));
+    }
+
+    // Automatic design runs. The app asks for one (status "pending"); a worker runs sim/autodesign.py,
+    // reports progress in "stage" and writes the ranked designs to "result".
+    match /auto_runs/{runId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['schema_version', 'uid', 'created_at', 'status', 'weather', 'target_apogee_ft'])
+        && request.resource.data.keys().hasOnly(['schema_version', 'uid', 'created_at', 'status', 'weather', 'target_apogee_ft',
+                                                 'budget_s', 'payload', 'conditions_id'])
+        && request.resource.data.schema_version == 1
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at == request.time
+        && request.resource.data.status == 'pending'
+        && validWeather(request.resource.data.weather)
+        && inRange(request.resource.data.target_apogee_ft, 700, 900)
+        && (!('budget_s' in request.resource.data) || inRange(request.resource.data.budget_s, 45, 600))
+        && (!('payload' in request.resource.data) || (request.resource.data.payload is map && request.resource.data.payload.size() <= 5))
+        && (!('conditions_id' in request.resource.data) || (request.resource.data.conditions_id is string
+              && request.resource.data.conditions_id.size() <= 64));
 
       allow read: if signedIn()
         && (resource == null || resource.data.uid == request.auth.uid || isWorker());

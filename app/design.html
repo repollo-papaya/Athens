@@ -321,6 +321,7 @@
   <div class="tabs" role="tablist" aria-label="Builder">
     <button role="tab" id="tab-build" aria-selected="true" aria-controls="pane-build">Build</button>
     <button role="tab" id="tab-fly" aria-selected="false" aria-controls="pane-fly">Fly</button>
+    <button role="tab" id="tab-auto" aria-selected="false" aria-controls="pane-auto">Auto design</button>
     <button role="tab" id="tab-ai" aria-selected="false" aria-controls="pane-ai">Ask AI</button>
   </div>
 
@@ -408,6 +409,36 @@
     <div class="twocol">
       <div class="card panel-pad"><h2>Suggestions</h2><ul class="sugg" id="sugg-full"></ul></div>
       <div class="card panel-pad"><h2>2027 rules check</h2><ul class="rules" id="rules"></ul></div>
+    </div>
+  </section>
+
+  <!-- AUTO DESIGN -->
+  <section class="pane" id="pane-auto" role="tabpanel" aria-labelledby="tab-auto" hidden>
+    <div class="card panel-pad">
+      <h2>Design rockets automatically</h2>
+      <p class="note">The algorithm builds rockets from your parts (ARC foam nose, BT-80 with two eggs and the altimeter bay, transition, BT-70 with the motor mount and balsa fins), tries every approved motor, sizes the fins, and tunes nose ballast, parachute and delay until each design hits the target. Every number comes from OpenRocket with your flight calibration. Launch conditions are the ones chosen on the Fly tab.</p>
+      <div class="form">
+        <label class="fld">Target apogee<span class="box"><input id="auto-target" type="number" inputmode="decimal" value="800" step="1"><span>ft</span></span>
+          <span class="hint">Qualification 800 ft; Finals is 775–825 ft.</span></label>
+        <label class="fld">How long to search<span class="box"><select id="auto-budget">
+          <option value="90">Quick, about 1½ min</option><option value="180" selected>Normal, about 3 min</option><option value="420">Thorough, about 7 min</option></select></span></label>
+        <label class="fld">Each egg<span class="box"><input id="auto-egg" type="number" inputmode="decimal" value="59" step="any"><span>g</span></span></label>
+        <label class="fld">Each egg protector<span class="box"><input id="auto-protector" type="number" inputmode="decimal" value="15" step="any"><span>g</span></span></label>
+        <label class="fld">Altimeter<span class="box"><input id="auto-alt" type="number" inputmode="decimal" value="7" step="any"><span>g</span></span>
+          <span class="hint">Weigh yours: these set the payload.</span></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn primary" id="auto-start" disabled>Start designing</button>
+        <span class="pill" id="auto-status" hidden></span>
+      </div>
+      <p class="note" id="auto-note" role="status" aria-live="polite"></p>
+    </div>
+    <div class="card panel-pad" id="auto-results" hidden>
+      <h2>Best designs</h2>
+      <p class="note" id="auto-summary"></p>
+      <div class="cands" id="auto-list"></div>
+      <details class="more"><summary>Motors screened</summary><p class="note" id="auto-screened"></p></details>
+      <p class="note" id="auto-assume"></p>
     </div>
   </section>
 

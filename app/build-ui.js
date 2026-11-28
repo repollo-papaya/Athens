@@ -814,7 +814,7 @@
     }
     // ARC payload
     const names = comps.map(c => (c.name || "").toLowerCase());
-    const eggs = names.filter(n => n.includes("egg") && !n.includes("protector") && !n.includes("casing")).length;
+    const eggs = names.filter(n => n.includes("large egg") || (n.includes("egg") && !n.includes("protector") && !n.includes("casing"))).length;
     if (tubes.length && eggs < 2) add("should", `Add the eggs (${eggs} of 2)`, "ARC 2027 carries two large eggs, 55–63 g each. If two unnamed mass items are the eggs, rename them instead.", "Add egg", () => { if (big) selected = big.id; addPart("my_egg"); });
     if (tubes.length && !names.some(n => n.includes("altimeter"))) add("should", "Add the altimeter", "ARC needs an approved altimeter on board.", "Add altimeter", () => { if (big) selected = big.id; addPart("my_alt"); });
     // flight
@@ -1004,11 +1004,11 @@
 
   // ---------------- tabs, zoom, units, templates ----------------
   function openTab(which) {
-    for (const t of ["build", "fly", "ai"]) { $("tab-" + t).setAttribute("aria-selected", String(t === which)); $("pane-" + t).hidden = t !== which; }
+    for (const t of ["build", "fly", "auto", "ai"]) { $("tab-" + t).setAttribute("aria-selected", String(t === which)); $("pane-" + t).hidden = t !== which; }
     if (which === "build") draw();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  for (const t of ["build", "fly", "ai"]) $("tab-" + t).addEventListener("click", () => openTab(t));
+  for (const t of ["build", "fly", "auto", "ai"]) $("tab-" + t).addEventListener("click", () => openTab(t));
   document.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => {
     zoom = Number(b.dataset.zoom); document.querySelectorAll("[data-zoom]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }));
   $("show-cgcp").addEventListener("change", draw);
@@ -1069,6 +1069,8 @@
       });
       link = { id, own, sig: saveSig() }; save(); update(); openTab("build");
     },
+    // A rocket made by the automatic designer: open it like a saved design, not linked to one.
+    openSpec(name, specJson) { this.loadSaved(null, false, { name, spec_json: specJson }); link = { id: null, own: false, sig: null }; save(); update(); },
     rename(n) { rocketName = n; save(); update(); },
     unlink() { link = { id: null, own: false, sig: null }; save(); update(); },
   };
