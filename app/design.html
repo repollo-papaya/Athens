@@ -113,6 +113,11 @@
   .canvas svg { display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
   .canvas svg text { font-family: var(--font-mono); fill: var(--muted); }
   .canvas.panning { cursor: grabbing; }
+  .canvas.vertical { overflow: auto; max-height: 78vh; }
+  .canvas.vertical svg { margin: 0 auto; }
+  .slide { display: grid; gap: 0.3rem; padding: 0.6rem 0.7rem; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+  .slide-label { font-size: 0.875rem; }
+  .slide input[type=range] { width: 100%; min-height: 2.5rem; accent-color: var(--accent); margin: 0; }
   #svg [data-id] { pointer-events: all; cursor: grab; }
   #svg .hl { stroke: var(--hl) !important; stroke-width: 2.6 !important; }
   #svg .hl.fillable { fill: var(--hl-fill) !important; }
@@ -316,6 +321,7 @@
           <button type="button" data-zoom="4" aria-pressed="false">4×</button>
         </div>
         <label class="check"><input type="checkbox" id="show-cgcp" checked> CG / CP</label>
+        <label class="check"><input type="checkbox" id="stand"> Stand up</label>
         <span class="state" id="state">Estimate</span>
       </div>
       <div class="canvas" id="canvas">

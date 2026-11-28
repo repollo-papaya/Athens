@@ -397,7 +397,8 @@
       default: return p.inner_radius_mm || p.outer_radius_mm || 20;
     }
   }
-  const foreRadius = (c) => c.type === "BodyTube" ? c.outer_radius_mm : c.type === "NoseCone" ? 0 : c.fore_radius_mm;
+  // A flipped nose cone is a tail cone: its base faces forward (fore_radius_mm) and its tip points back.
+  const foreRadius = (c) => c.type === "BodyTube" ? c.outer_radius_mm : c.type === "NoseCone" && !c.flipped ? 0 : c.fore_radius_mm;
   const aftRadius = (c) => c.type === "BodyTube" ? c.outer_radius_mm : c.aft_radius_mm;
 
   // Parts marked "auto" take their size from their neighbours, as OpenRocket's automatic radius does.
@@ -405,7 +406,11 @@
     const stage = comps.filter(c => c.parent == null);
     stage.forEach((c, i) => {
       const prev = stage[i - 1], next = stage[i + 1];
-      if (c.type === "NoseCone" && c.auto_radius && next) {
+      if (c.type === "NoseCone" && c.auto_radius && c.flipped && prev) {
+        c.fore_radius_mm = aftRadius(prev) || c.fore_radius_mm;
+        if (c.fore_shoulder_length_mm > 0 && prev.type === "BodyTube") c.fore_shoulder_radius_mm = prev.outer_radius_mm - prev.thickness_mm;
+      }
+      if (c.type === "NoseCone" && c.auto_radius && !c.flipped && next) {
         c.aft_radius_mm = foreRadius(next) || c.aft_radius_mm;
         if (c.aft_shoulder_length_mm > 0 && next.type === "BodyTube") c.aft_shoulder_radius_mm = next.outer_radius_mm - next.thickness_mm;
       }
@@ -516,7 +521,23 @@
     });
   }
 
-  const api = { preview, analyze, importDesign, estimateMass, geometry, innerRadiusOf, MATERIALS, CLOTH, DEFAULT_MATERIAL,
+  // Turn a part end for end: nose cones become tail cones, transitions swap ends, fins mirror their sweep.
+  function flip(c) {
+    if (c.type === "NoseCone" || c.type === "Transition") {
+      const swap = (a, b) => { const t = c[a]; c[a] = c[b]; c[b] = t; };
+      swap("fore_radius_mm", "aft_radius_mm");
+      for (const k of ["length_mm", "radius_mm", "thickness_mm", "capped"]) swap(`fore_shoulder_${k}`, `aft_shoulder_${k}`);
+      if (c.type === "NoseCone") c.flipped = !c.flipped;
+      else c.flipped = !c.flipped;
+      return true;
+    }
+    if (c.type === "TrapezoidFinSet") { c.sweep_mm = Math.round((c.root_chord_mm - c.tip_chord_mm - c.sweep_mm) * 10) / 10; return true; }
+    if (c.type === "FreeformFinSet") { const L = Math.max(...c.points_mm.map(p => p[0])); c.points_mm = c.points_mm.map(([x, y]) => [Math.round((L - x) * 100) / 100, y]).reverse(); return true; }
+    return false;
+  }
+  const canFlip = (c) => ["NoseCone", "Transition", "TrapezoidFinSet", "FreeformFinSet"].includes(c.type);
+
+  const api = { flip, canFlip, preview, analyze, importDesign, estimateMass, geometry, innerRadiusOf, MATERIALS, CLOTH, DEFAULT_MATERIAL,
                 profileRadius, finGeometry, finShape, finAero, bodyAero, trapezoid, finPoints, NOSE_BALLAST_FRACTION };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.RocketBuilder = api;

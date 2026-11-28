@@ -148,6 +148,13 @@
     my_bt70: { label: "BT-70 tube", icon: "tube", where: "stage", mine: true, make: () => ({ type: "BodyTube", name: "BT-70 body tube", length_mm: 457.2, outer_radius_mm: 28.16,
       thickness_mm: 0.47, material: "Paper (spiral tube)", finish_key: "NORMAL" }) },
     my_trans: { label: "BT-80 to BT-70 transition", icon: "transition", where: "stage", mine: true, make: () => fromTeam(11, { name: "Transition, BT-80 to BT-70", auto_radius: false }) },
+    my_trans_up: { label: "BT-70 to BT-80 transition", icon: "transup", where: "stage", mine: true, make: () => { const t = fromTeam(11, { name: "Transition, BT-70 to BT-80", auto_radius: false }); if (t) RB.flip(t); return t; } },
+    my_avbay: { label: "Altimeter bay", icon: "avbay", where: "inside", mine: true, make: () => [
+      { type: "TubeCoupler", name: "Altimeter bay", length_mm: 101.6, outer_radius_mm: 30, inner_radius_mm: 29.2, auto_radius: true, axial_method: "TOP", axial_offset_mm: 0, material: "Cardboard" },
+      { type: "Bulkhead", name: "Bay bulkhead (front)", length_mm: 6.4, outer_radius_mm: 29, auto_radius: true, axial_method: "TOP", axial_offset_mm: 0, material: "Birch plywood" },
+      { type: "MassComponent", name: "Altimeter (Jolly Logic AltimeterOne)", mass_g: 7, length_mm: 40, radius_mm: 12.5, weighed: true, auto_radius: true, axial_method: "MIDDLE", axial_offset_mm: 0 },
+      { type: "Bulkhead", name: "Bay bulkhead (back)", length_mm: 6.4, outer_radius_mm: 29, auto_radius: true, axial_method: "BOTTOM", axial_offset_mm: 0, material: "Birch plywood" },
+    ] },
     my_mount: { label: "29 mm motor mount", icon: "inner", where: "inside", mine: true, make: () => ({ type: "InnerTube", name: "29 mm motor mount", length_mm: 110, outer_radius_mm: 15.35,
       inner_radius_mm: 14.55, motor_mount: true, motor_overhang_mm: 0, axial_method: "BOTTOM", axial_offset_mm: 0, material: "Cardboard" }) },
     my_bt5: { label: "BT-5 mount (13 mm)", icon: "inner", where: "inside", mine: true, make: () => ({ type: "InnerTube", name: "BT-5 motor mount", length_mm: 70, outer_radius_mm: 6.91,
@@ -167,7 +174,7 @@
     my_chute21: { label: "21 in plastic chute", icon: "chute", where: "inside", mine: true, make: () => fromTeam(13, { name: "Parachute, 21 in plastic", axial_method: "TOP", axial_offset_mm: 0 }) },
   };
   const PALETTE = [
-    ["Your parts", ["my_nose", "my_bt80", "my_trans", "my_bt70", "my_mount", "my_fins", "my_rail", "my_egg", "my_protector", "my_alt", "my_chute18", "my_chute21", "my_ballast", "my_bt5"]],
+    ["Your parts", ["my_nose", "my_bt80", "my_trans", "my_trans_up", "my_bt70", "my_mount", "my_fins", "my_rail", "my_egg", "my_protector", "my_alt", "my_avbay", "my_chute18", "my_chute21", "my_ballast", "my_bt5"]],
     ["Body and fins", ["nose", "bodytube", "transition", "trapezoid", "elliptical", "railbutton", "launchlug"]],
     ["Inner", ["innertube", "coupler", "ring", "bulkhead", "engineblock"]],
     ["Mass", ["parachute", "shockcord", "mass"]],
@@ -193,6 +200,8 @@
     egg: '<ellipse cx="18" cy="10" rx="11" ry="7.5"/>',
     protector: '<rect x="4" y="3" width="28" height="14" rx="3"/><ellipse cx="18" cy="10" rx="8" ry="5"/>',
     alt: '<rect x="9" y="4" width="18" height="12" rx="2"/><path d="M13 13 L 16 8 L 19 11 L 23 6"/>',
+    transup: '<path d="M2 6 L 8 6 L 26 3 L 36 3 L 36 17 L 26 17 L 8 14 L 2 14 Z"/><path d="M8 6 L 8 14 M26 3 L 26 17"/>',
+    avbay: '<rect x="2" y="3" width="34" height="14" stroke-opacity=".35"/><rect x="8" y="5" width="20" height="10"/><path d="M8 5 L 8 15 M28 5 L 28 15"/><path d="M13 12 L 16 8 L 19 11 L 23 7"/>',
     ballast: '<path d="M2 10 C 10 2, 22 3, 34 4 L 34 16 C 22 17, 10 18, 2 10 Z"/><circle cx="20" cy="10" r="3.5" fill="currentColor"/>',
   };
 
@@ -202,14 +211,16 @@
     if (def.where === "nose") return parts.some(p => p.type === "NoseCone");
     const t = targetFor(def.where);
     if (!t.parent) return false;
-    if (def.make({}).type === "EngineBlock") return t.parent.type === "InnerTube";
+    if (key === "engineblock") return t.parent.type === "InnerTube";
     return true;
   }
   function addPart(key) {
     const def = CATALOG[key];
     let where = def.where === "nose" ? { parent: parts.find(p => p.type === "NoseCone") } : targetFor(def.where);
-    const p = def.make(where);
-    if (!p) return;
+    const made = def.make(where);
+    if (!made) return;
+    const group = Array.isArray(made) ? made : [made];
+    const p = group[0];
     p.id = newId();
     if (def.where === "stage") { p.parent = null; p.axial_method = "AFTER"; p.axial_offset_mm = 0; }
     else {
@@ -226,9 +237,11 @@
         p.axial_offset_mm = Math.max(0, Math.min(at, par.length_mm - p.length_mm));
       }
     }
-    if (p.weighed == null) p.weighed = !!p.mass_measured;
-    delete p.density_from; delete p.mass_measured;
-    commit(() => insertPart(p, where), p.id);
+    for (const q of group) { if (q.weighed == null) q.weighed = !!q.mass_measured; delete q.mass_measured; }
+    commit(() => {
+      insertPart(p, where);
+      for (const q of group.slice(1)) { q.id = newId(); q.parent = p.id; parts.splice(endOfBlock(p.id), 0, q); }
+    }, p.id);
   }
 
   function buildPalette() {
@@ -301,18 +314,30 @@
     const length = Math.max(sum.length_mm, 100);
     const padX = 16, rulerH = 26;
     const vbW = length + 2 * padX, vbH = 2 * halfH + rulerH + 6;
-    svg.setAttribute("viewBox", `${-padX} ${-halfH - rulerH} ${vbW} ${vbH}`);
+    // Lying down (nose left) fills a wide screen; standing up (nose at the top) fills a phone held upright.
     const box = $("canvas").clientWidth || 360;
-    const wpx = Math.round(box * zoom);
+    let wpx, hpx, px;
+    if (vertical) {
+      const tall = Math.max(420, Math.round(innerHeight * 0.72));
+      px = Math.max(vbH / box, vbW / tall) / zoom;               // mm per screen pixel
+      wpx = Math.max(box, Math.round(vbH / px)); hpx = Math.round(vbW / px);
+      const extra = (wpx * px - vbH) / 2;
+      svg.setAttribute("viewBox", `${-(vbH - halfH - rulerH) - extra} ${-padX} ${wpx * px} ${vbW}`);
+    } else {
+      wpx = Math.round(box * zoom);
+      hpx = Math.max(120, Math.round(wpx * vbH / vbW) + 20);
+      px = Math.max(vbW / wpx, vbH / hpx);
+      svg.setAttribute("viewBox", `${-padX} ${-halfH - rulerH} ${vbW} ${vbH}`);
+    }
     svg.setAttribute("width", wpx);
-    const hpx = Math.max(120, Math.round(wpx * vbH / vbW) + 20);
     svg.setAttribute("height", hpx);
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    const px = Math.max(vbW / wpx, vbH / hpx);
     const sw = (n) => (n * px).toFixed(3);
     state.mmPerPx = px;
+    const root = svgEl("g", vertical ? { transform: "rotate(90)" } : {}, svg);
+    $("canvas").classList.toggle("vertical", vertical);
 
-    const ruler = svgEl("g", { "aria-hidden": "true" }, svg);
+    const ruler = svgEl("g", { "aria-hidden": "true" }, root);
     const ry = -halfH - 8;
     svgEl("line", { x1: 0, y1: ry, x2: length, y2: ry, stroke: "var(--muted)", "stroke-width": sw(1) }, ruler);
     const step = U().metric ? 10 : 25.4;
@@ -320,10 +345,11 @@
     for (let i = 0; i * step <= length + 0.1; i++) {
       const x = i * step;
       svgEl("line", { x1: x, y1: ry, x2: x, y2: ry + (i % 5 ? 3 : 6) * px * 1.4, stroke: "var(--muted)", "stroke-width": sw(1) }, ruler);
-      if (i % every === 0) { const t = svgEl("text", { x, y: ry - 4 * px, "font-size": (11 * px).toFixed(2), "text-anchor": i ? "middle" : "start" }, ruler);
+      if (i % every === 0) { const t = svgEl("text", { x, y: ry - 4 * px, "font-size": (11 * px).toFixed(2), "text-anchor": vertical ? "start" : i ? "middle" : "start",
+          transform: vertical ? `rotate(-90 ${x} ${ry - 4 * px})` : null, "dominant-baseline": vertical ? "middle" : null }, ruler);
         t.textContent = i ? fmt(x / U().per, U().len === "m" ? 2 : 0) : `0 ${U().len}`; }
     }
-    const lay = { body: svgEl("g", {}, svg), inner: svgEl("g", {}, svg), fins: svgEl("g", {}, svg), top: svgEl("g", {}, svg) };
+    const lay = { body: svgEl("g", {}, root), inner: svgEl("g", {}, root), fins: svgEl("g", {}, root), top: svgEl("g", {}, root) };
     const tag = (n, c, fillable) => { n.dataset.id = c.id; if (fillable) n.classList.add("fillable"); return n; };
     const parentOf = (c) => comps.find(p => p.id === c.parent);
     for (const f of fins) {
@@ -390,20 +416,22 @@
       n.classList.add("hl"); n.querySelectorAll?.(".fillable, rect, path").forEach(k => k.classList.add("hl")); });
   }
   const state = { mmPerPx: 1 };
+  let vertical = false;
+  try { vertical = localStorage.getItem("athens-standing") === "1"; } catch {}
 
   // ---------------- drag, pan, tap ----------------
   let ptr = null;
   $("svg").addEventListener("pointerdown", (e) => {
     const t = e.target.closest("[data-id]");
-    ptr = { x0: e.clientX, id: t ? t.dataset.id : null, moved: false, scroll0: $("canvas").scrollLeft };
+    ptr = { x0: vertical ? e.clientY : e.clientX, id: t ? t.dataset.id : null, moved: false, scroll0: vertical ? $("canvas").scrollTop : $("canvas").scrollLeft };
     try { $("svg").setPointerCapture(e.pointerId); } catch {}
   });
   $("svg").addEventListener("pointermove", (e) => {
     if (!ptr) return;
-    const dxPx = e.clientX - ptr.x0;
+    const dxPx = (vertical ? e.clientY : e.clientX) - ptr.x0;
     if (!ptr.moved && Math.abs(dxPx) < 6) return;
     ptr.moved = true;
-    if (!ptr.id) { $("canvas").scrollLeft = ptr.scroll0 - dxPx; $("canvas").classList.add("panning"); return; }
+    if (!ptr.id) { $("canvas")[vertical ? "scrollTop" : "scrollLeft"] = ptr.scroll0 - dxPx; $("canvas").classList.add("panning"); return; }
     if (!ptr.nodes) {
       const ids = new Set(block(ptr.id).map(p => p.id));
       ptr.nodes = [...document.querySelectorAll("#svg [data-id]")].filter(n => ids.has(n.dataset.id));
@@ -481,10 +509,11 @@
     }
     switch (c.type) {
       case "NoseCone":
+        { const end = c.flipped ? "fore" : "aft";
         S("shape", "Shape", Object.entries(SHAPE)); L("length_mm", "Length", 5, 1000);
-        D("aft_radius_mm", "Base diameter", 5, 300, { auto: true });
+        D(`${end}_radius_mm`, "Base diameter", 5, 300, { auto: true });
         if (["OGIVE", "POWER", "PARABOLIC", "HAACK"].includes(c.shape)) N("shape_param", "Shape parameter", 0, c.shape === "HAACK" ? 0.333 : 1, { step: 0.05 });
-        L("aft_shoulder_length_mm", "Shoulder length", 0, 300); D("aft_shoulder_radius_mm", "Shoulder diameter", 0, 300);
+        L(`${end}_shoulder_length_mm`, "Shoulder length", 0, 300); D(`${end}_shoulder_radius_mm`, "Shoulder diameter", 0, 300); }
         C("filled", "Solid"); if (!c.filled) L("thickness_mm", "Wall thickness", 0.2, 20);
         break;
       case "BodyTube":
@@ -649,6 +678,7 @@
     for (const f of fieldsFor(c, v)) grid.append(fieldEl(f, c, v));
     grid.append(massRow(c, v));
     const actions = h("div", "actions");
+    if (RB.canFlip(c)) actions.append(button("Flip ⇄", "btn plain", () => commit(() => { const p = byId(c.id); RB.flip(p); p.auto_radius = false; }, c.id)));
     if (c.parent == null) {
       const st = stageParts(), i = st.indexOf(c);
       const fwd = button("◀ Move forward", "btn plain", () => commit(() => { const mv = block(c.id); removeBlock(c.id); const s2 = stageParts(); parts.splice(parts.indexOf(s2[i - 1]), 0, ...mv); }, c.id));
@@ -662,7 +692,47 @@
     if (c.type === "InnerTube" && c.motor_mount) actions.append(button("Choose motor", "btn", () => openTab("fly")));
     const extra = [];
     if (c.type === "FreeformFinSet") extra.push(h("p", "note", "Rounded (freeform) fins from the .ork. Changing the outline isn't possible here; delete them and add trapezoidal or elliptical fins to reshape."));
-    ed.replaceChildren(head, grid, ...extra, actions);
+    if (/altimeter/i.test(c.name)) extra.push(h("p", "note", "ARC needs the altimeter on board. Put it in a sealed bay (the Altimeter bay button) or with the eggs, drill 3–4 small vent holes (about 1/16 in) in the tube next to it, and keep it away from the ejection charge."));
+    ed.replaceChildren(head, slider(c, v), grid, ...extra, actions);
+  }
+
+  // A slider that slides the part through the rocket: along its tube, or through the airframe order.
+  function slider(c, v) {
+    const wrap = h("div", "slide");
+    const range = Object.assign(document.createElement("input"), { type: "range" });
+    const label = h("span", "slide-label");
+    let before = null;
+    const live = () => { analyse(); draw(); renderStats(); const r = rules(); renderTips(suggestions()); renderDock(r); };
+    if (c.parent == null) {
+      const st = stageParts(), i = st.indexOf(c);
+      Object.assign(range, { min: 0, max: Math.max(0, st.length - 1), step: 1, value: i, disabled: st.length < 2 });
+      const say = (k) => { label.textContent = `Place in the airframe: ${k + 1} of ${st.length}${k === 0 ? " (front)" : k === st.length - 1 ? " (back)" : ""}`; };
+      say(i);
+      range.addEventListener("input", () => {
+        if (before == null) before = snapshot();
+        const k = Number(range.value), mv = block(c.id); removeBlock(c.id);
+        const rest = stageParts(); const at = k < rest.length ? parts.indexOf(rest[k]) : parts.length;
+        parts.splice(at, 0, ...mv); say(k); live();
+      });
+    } else {
+      const p = view.components.find(x => x.id === c.parent);
+      const lo = c.type === "TubeCoupler" ? -c.length_mm : 0, hi = Math.max(lo + 1, p.length_mm - (c.type === "TubeCoupler" ? 0 : c.length_mm));
+      Object.assign(range, { min: lo, max: hi, step: 0.5, value: Math.max(lo, Math.min(hi, v.offset_in_parent_mm || 0)) });
+      const say = (o) => { label.textContent = `Slide along the ${p.name}: ${len(Math.abs(o) < 0.3 ? 0 : o)} from its top`; };
+      say(Number(range.value));
+      range.addEventListener("input", () => {
+        if (before == null) before = snapshot();
+        const part = byId(c.id); part.axial_method = "TOP"; part.axial_offset_mm = Number(range.value);
+        say(Number(range.value)); live();
+      });
+    }
+    range.setAttribute("aria-label", c.parent == null ? "Place in the airframe" : "Position along its tube");
+    range.addEventListener("change", () => {
+      if (before != null) { undoStack.push(before); redoStack.length = 0; before = null; }
+      save(); update();
+    });
+    wrap.append(label, range);
+    return wrap;
   }
   function duplicate(id) {
     commit(() => {
@@ -930,6 +1000,8 @@
   document.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => {
     zoom = Number(b.dataset.zoom); document.querySelectorAll("[data-zoom]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }));
   $("show-cgcp").addEventListener("change", draw);
+  $("stand").checked = vertical;
+  $("stand").addEventListener("change", () => { vertical = $("stand").checked; try { localStorage.setItem("athens-standing", vertical ? "1" : "0"); } catch {} draw(); });
   let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => view && draw(), 120); });
   $("units").value = units;
   $("units").addEventListener("change", () => { units = $("units").value; try { localStorage.setItem("athens-units", units); } catch {} syncFly(); update(); });

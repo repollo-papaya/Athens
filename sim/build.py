@@ -84,6 +84,8 @@ def check_spec(spec: dict) -> list[dict]:
 
 def _make(J, c: dict):
     t = c["type"]
+    if t == "NoseCone" and c.get("flipped"):
+        t = "Transition"   # a nose cone turned round (a tail cone): base forward, tip aft
     comp = J(t)()
     comp.setName(str(c.get("name") or t)[:60])
     L = lambda: _m(_num(c, "length_mm", 0.1, 3000))
