@@ -7,6 +7,7 @@ rules_version = '2';
 //   launch_conditions  launch conditions saved by the app's first page (app/)
 //   sim_jobs           simulation requests from the app, run by a worker (sim/worker.py)
 //   design_chats       design chat requests: a worker designs, simulates and recommends (sim/designer.py)
+//   designs            rockets saved from the builder (app/design.html), shared with the team
 // Everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -133,6 +134,32 @@ service cloud.firestore {
                && request.resource.data.claimed_by == request.auth.uid)
             || (resource.data.status == 'running' && request.resource.data.status in ['running', 'done', 'failed']
                && resource.data.claimed_by == request.auth.uid));
+    }
+
+    // Saved rocket designs from the builder. Everyone signed in can see them (team library);
+    // only the account that saved one can change or delete it.
+    function validDesign(d) {
+      return d.keys().hasAll(['schema_version', 'uid', 'name', 'spec_json', 'summary', 'created_at', 'updated_at'])
+        && d.keys().hasOnly(['schema_version', 'uid', 'name', 'spec_json', 'summary', 'created_at', 'updated_at'])
+        && d.schema_version == 1
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.spec_json is string && d.spec_json.size() <= 300000
+        && d.summary is map && d.summary.size() <= 10
+        && d.updated_at == request.time;
+    }
+
+    match /designs/{designId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && validDesign(request.resource.data)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at == request.time;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && validDesign(request.resource.data)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.created_at == resource.data.created_at;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /connection_tests/{testId} {

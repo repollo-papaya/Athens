@@ -2,7 +2,8 @@
 import { firebaseConfig } from "../firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocsFromServer, query, where, limit, serverTimestamp, onSnapshot }
+import { getFirestore, collection, addDoc, getDocsFromServer, getDocFromServer, query, where, limit, orderBy, serverTimestamp, onSnapshot,
+  doc, updateDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -144,6 +145,84 @@ $("chat-form").addEventListener("submit", (e) => { e.preventDefault(); sendChat(
 document.querySelectorAll("#chat-examples button").forEach(b => b.addEventListener("click", () => { $("chat-input").value = b.textContent; $("chat-input").focus(); }));
 $("chat-new").addEventListener("click", () => { lastChatId = null; if (chatWatch) chatWatch(); $("chat-log").replaceChildren(); $("chat-new").hidden = true; });
 
+// ----- Saved designs (collection "designs"; the whole team can see them) -----
+const lib = { open: false, items: [] };
+const when = (ts) => ts?.toDate ? ts.toDate().toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+function libNote(text) { $("library-list").replaceChildren(el("li", "note", text)); }
+
+async function refreshLibrary() {
+  if (!user) return;
+  try {
+    const snap = await getDocsFromServer(query(collection(db, "designs"), orderBy("updated_at", "desc"), limit(60)));
+    lib.items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    libNote(err.code === "permission-denied" ? "The database refused to list designs. Publish the latest firestore.rules (they add saved designs)." : err.message);
+    return;
+  }
+  renderLibrary();
+}
+function renderLibrary() {
+  const cur = B().link().id;
+  if (!lib.items.length) { libNote("No saved designs yet. Build a rocket and tap Save."); return; }
+  $("library-list").replaceChildren(...lib.items.map(d => {
+    const mine = d.uid === user.uid, s = d.summary || {};
+    const li = el("li", "item" + (d.id === cur ? " current" : ""));
+    const nm = el("div", "nm", d.name || "Untitled");
+    nm.append(el("span", "who", mine ? "yours" : "team"));
+    if (d.id === cur) nm.append(el("span", "who", "open"));
+    li.append(nm, el("span", "note", when(d.updated_at)));
+    const bits = [`${s.parts ?? "?"} parts`, `${fmt(s.mass_g ?? 0, 0)} g`, `${fmt(s.stability_cal ?? 0, 2)} cal`, B().len(s.length_mm || 0)];
+    if (s.apogee_ft) bits.push(`${B().alt(s.apogee_ft)}, ${fmt(s.duration_s)} s`);
+    li.append(el("div", "meta", bits.join(" · ")));
+    const acts = el("div", "actions");
+    const open = el("button", "btn primary", "Open"); open.type = "button";
+    open.addEventListener("click", async () => {
+      if (B().dirty() && !confirm("Open this design? The rocket on screen has unsaved changes (Undo can bring it back).")) return;
+      try { const snap = await getDocFromServer(doc(db, "designs", d.id)); B().loadSaved(d.id, mine, snap.data()); closeLibrary(); }
+      catch (err) { alert("Could not open it: " + err.message); }
+    });
+    acts.append(open);
+    if (mine) {
+      const del = el("button", "btn danger", "Delete"); del.type = "button";
+      del.addEventListener("click", async () => {
+        if (!confirm(`Delete "${d.name}" for the whole team? This can't be undone.`)) return;
+        try { await deleteDoc(doc(db, "designs", d.id)); if (B().link().id === d.id) B().unlink(); refreshLibrary(); }
+        catch (err) { alert("Could not delete it: " + err.message); }
+      });
+      acts.append(del);
+    }
+    li.append(acts);
+    return li;
+  }));
+}
+function openLibrary() { $("library").hidden = false; $("library-btn").setAttribute("aria-expanded", "true"); libNote("Loading…"); refreshLibrary(); $("library").scrollIntoView({ behavior: "smooth", block: "start" }); }
+function closeLibrary() { $("library").hidden = true; $("library-btn").setAttribute("aria-expanded", "false"); }
+$("library-btn").addEventListener("click", () => $("library").hidden ? openLibrary() : closeLibrary());
+$("library-close").addEventListener("click", closeLibrary);
+
+async function saveDesign(asNew) {
+  const b = B(), link = b.link();
+  if (asNew && link.id) b.rename((b.rocketName() + " (copy)").slice(0, 60));
+  const data = b.forSave();
+  if (!JSON.parse(data.spec_json).components.length) { alert("Add some parts before saving."); return; }
+  $("save").disabled = true; $("save").textContent = "Saving…";
+  try {
+    if (link.id && link.own && !asNew) {
+      await updateDoc(doc(db, "designs", link.id), { name: data.name, spec_json: data.spec_json, summary: data.summary, updated_at: serverTimestamp() });
+      b.markSaved(link.id, data.sig);
+    } else {
+      const ref = await addDoc(collection(db, "designs"), { schema_version: 1, uid: user.uid, name: data.name,
+        spec_json: data.spec_json, summary: data.summary, created_at: serverTimestamp(), updated_at: serverTimestamp() });
+      b.markSaved(ref.id, data.sig);
+    }
+    if (!$("library").hidden) refreshLibrary();
+  } catch (err) {
+    alert(err.code === "permission-denied" ? "The database refused to save. Publish the latest firestore.rules (they add saved designs)." : "Could not save: " + err.message);
+  } finally { $("save").textContent = "Save"; $("save").disabled = false; }
+}
+$("save").addEventListener("click", () => saveDesign(false));
+$("save-copy").addEventListener("click", () => saveDesign(true));
+
 function ready() {
   onAuthStateChanged(auth, async (u) => {
     if (!u) return;
@@ -151,6 +230,7 @@ function ready() {
     await loadConditions();
     B().setCloudReady(true);
     $("chat-send").disabled = false;
+    $("save").disabled = false; $("save-copy").disabled = false;
   });
   signInAnonymously(auth).catch((err) => setStatus("failed", "Offline", "Could not sign in: " + (err.code || err.message)));
 }

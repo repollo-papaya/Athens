@@ -80,6 +80,16 @@
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
   .panel-pad { padding: 0.9rem 1rem; display: grid; gap: 0.75rem; }
 
+  .save-state { font-size: 0.8125rem; color: var(--warn-fg); white-space: nowrap; }
+  .save-state.ok { color: var(--ok-fg); }
+  .lib { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  .lib li.item { border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.7rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem 0.75rem; align-items: center; }
+  .lib li.item.current { border-color: var(--accent); }
+  .lib .nm { font-weight: 600; overflow-wrap: anywhere; }
+  .lib .meta { grid-column: 1 / -1; font: 400 0.8125rem/1.4 var(--font-mono); color: var(--muted); }
+  .lib .actions { grid-column: 1 / -1; }
+  .who { font: 500 0.625rem/1 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.45rem; color: var(--muted); margin-left: 0.4rem; vertical-align: 2px; }
+
   /* Add new component (OpenRocket's panel) */
   .addbox { padding: 0.75rem 0.9rem 0.9rem; display: grid; gap: 0.6rem; }
   .addbox .head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
@@ -281,7 +291,10 @@
 <main class="wrap">
   <div class="top">
     <label class="sr-only" for="name">Rocket name</label>
-    <input class="name" id="name" value="My rocket" maxlength="40" autocomplete="off">
+    <input class="name" id="name" value="My rocket" maxlength="60" autocomplete="off">
+    <span class="save-state" id="save-state" aria-live="polite"></span>
+    <button type="button" class="btn primary" id="save" disabled>Save</button>
+    <button type="button" class="btn plain" id="library-btn" aria-expanded="false" aria-controls="library">My designs</button>
     <select class="sel" id="template" aria-label="Start from">
       <option value="">New…</option>
       <option value="blank">Blank page</option>
@@ -292,6 +305,18 @@
       <option value="in">in &amp; ft</option><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option>
     </select>
   </div>
+
+  <section class="card panel-pad" id="library" hidden aria-labelledby="library-title">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem">
+      <h2 id="library-title">Saved designs</h2>
+      <button type="button" class="x" id="library-close" aria-label="Close saved designs">×</button>
+    </div>
+    <p class="note">Everyone on the team sees these. You can change and delete the ones you saved; open a teammate's and save a copy to change it.</p>
+    <div class="actions">
+      <button type="button" class="btn" id="save-copy" disabled>Save as a new design</button>
+    </div>
+    <ul class="lib" id="library-list"><li class="note">Loading…</li></ul>
+  </section>
 
   <div class="tabs" role="tablist" aria-label="Builder">
     <button role="tab" id="tab-build" aria-selected="true" aria-controls="pane-build">Build</button>

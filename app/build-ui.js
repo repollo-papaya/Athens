@@ -63,7 +63,10 @@
 
   const snapshot = () => JSON.stringify({ parts, motorKey, delay, liftoff, rocketName });
   function restore(s) { const o = JSON.parse(s); parts = o.parts; motorKey = o.motorKey; delay = o.delay; liftoff = o.liftoff; rocketName = o.rocketName || rocketName; }
-  function save() { try { localStorage.setItem("athens-builder-v2", snapshot()); } catch {} }
+  function save() { try { localStorage.setItem("athens-builder-v2", snapshot()); localStorage.setItem("athens-builder-link", JSON.stringify(link)); } catch {} }
+  // The saved design this rocket was opened from or saved as (id in the "designs" collection).
+  let link = { id: null, own: false, sig: null };
+  try { link = JSON.parse(localStorage.getItem("athens-builder-link")) || link; } catch {}
   function commit(fn, select) {
     undoStack.push(snapshot()); if (undoStack.length > 80) undoStack.shift();
     redoStack.length = 0;
@@ -958,7 +961,16 @@
     renderDock(r);
     $("undo").disabled = !undoStack.length; $("redo").disabled = !redoStack.length;
     $("name").value = rocketName;
+    const ss = $("save-state");
+    ss.textContent = !parts.length ? "" : link.id && link.sig === saveSig() ? (link.own ? "Saved" : "Team design · save a copy to keep changes") : "Unsaved changes";
+    ss.className = "save-state" + (link.id && link.sig === saveSig() ? " ok" : "");
   }
+  // What is saved: the parts as built (with their material densities), motor and name.
+  function saveSpec() {
+    const comps = parts.map(c => { const o = {}; for (const [k, v] of Object.entries(c)) if (!["x_mm", "cg_x_mm", "offset_in_parent_mm"].includes(k) && v != null) o[k] = v; return o; });
+    return JSON.stringify({ components: comps, motor_key: motorKey, delay_s: delay, ...(liftoff ? { liftoff_mass_g: liftoff } : {}) });
+  }
+  const saveSig = () => rocketName + "\n" + saveSpec();
 
   // ---------------- Fly tab controls ----------------
   function fillMotors() {
@@ -1014,7 +1026,7 @@
         parts = JSON.parse(JSON.stringify(src)); rocketName = which === "team" ? "Ederance (original)" : "Ederance, 29 mm mount";
         motorKey = which === "team" ? (menu.find(m => /F39/.test(m.designation)) || {}).key || motorKey : "F59WT|Cesaroni"; delay = 5;
       }
-      liftoff = null; selected = null; syncFly();
+      liftoff = null; selected = null; link = { id: null, own: false, sig: null }; syncFly();
     });
   }
   $("template").addEventListener("change", () => { const v = $("template").value; $("template").value = ""; if (!v) return;
@@ -1031,11 +1043,34 @@
       commit(() => {
         parts = RB.importDesign(design);
         if (motor && menu.some(m => m.key === motor)) motorKey = motor; else if (!motor) motorKey = "F59WT|Cesaroni";
-        delay = delay_s ?? design.motors[0]?.delay_s ?? delay; liftoff = null; rocketName = name || rocketName; selected = null; syncFly();
+        delay = delay_s ?? design.motors[0]?.delay_s ?? delay; liftoff = null; rocketName = name || rocketName; selected = null;
+        link = { id: null, own: false, sig: null }; syncFly();
       });
       openTab("build");
     },
     openTab, alt, len,
+    // ----- saved designs -----
+    link: () => ({ ...link }),
+    dirty: () => parts.length > 0 && !(link.id && link.sig === saveSig()),
+    forSave() {
+      const s = view.summary;
+      return { name: rocketName.slice(0, 60), spec_json: saveSpec(), sig: saveSig(),
+        summary: { mass_g: Math.round(s.mass_with_motor_g * 10) / 10, stability_cal: s.stability_cal ?? 0, length_mm: Math.round(s.length_mm * 10) / 10,
+                   parts: parts.length, ...(view.flight ? { apogee_ft: view.flight.predicted.apogee_ft, duration_s: view.flight.predicted.duration_s } : {}) } };
+    },
+    markSaved(id, sig) { link = { id, own: true, sig }; save(); update(); },
+    loadSaved(id, own, data) {
+      const spec = JSON.parse(data.spec_json);
+      commit(() => {
+        parts = spec.components; motorKey = spec.motor_key || motorKey; delay = spec.delay_s ?? delay; liftoff = spec.liftoff_mass_g ?? null;
+        rocketName = data.name || "Saved rocket"; selected = null; sim = null;
+        seq = 1 + Math.max(0, ...parts.map(p => Number(String(p.id).replace(/\D/g, "")) || 0));
+        syncFly();
+      });
+      link = { id, own, sig: saveSig() }; save(); update(); openTab("build");
+    },
+    rename(n) { rocketName = n; save(); update(); },
+    unlink() { link = { id: null, own: false, sig: null }; save(); update(); },
   };
 
   // ---------------- start ----------------
